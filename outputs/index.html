@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="KAI 算力交易台——购入、存入、置换、报价与出售算力。" />
+  <meta name="theme-color" content="#0b7a43" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>KAI · 算力交易台</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <script src="color-mode-init.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="tariff.css" />
+  <link rel="stylesheet" href="sci-fi.css" />
+  <link rel="stylesheet" href="blue-theme.css" />
+  <link rel="stylesheet" href="refinement.css" />
+  <link rel="stylesheet" href="interactions.css" />
+  <link rel="stylesheet" href="iterations.css" />
+  <link rel="stylesheet" href="generations.css" />
+  <link rel="stylesheet" href="assessment.css" />
+  <link rel="stylesheet" href="production.css" />
+  <link rel="stylesheet" href="market-chart.css" />
+  <link rel="stylesheet" href="editorial.css" />
+  <link rel="stylesheet" href="kai-design-system.css" />
+  <link rel="stylesheet" href="supplier-workbench.css" />
+  <link rel="stylesheet" href="operations.css" />
+  <link rel="stylesheet" href="h100-purchase.css" />
+  <link rel="stylesheet" href="app-closure.css" />
+  <link rel="stylesheet" href="market-terminal.css" />
+  <link rel="stylesheet" href="identity-auth.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" aria-label="KAI 首页"><span class="brand-mark">K</span><span>KAI<span class="brand-sub">算力交易台</span></span></a>
+      <nav class="nav" aria-label="主要导航">
+        <button class="nav-item active" data-view="market"><span>◫</span>算力市场</button>
+        <button class="nav-item" data-view="vault"><span>◇</span>我的算力库 <b id="vaultBadge">3</b></button>
+        <button class="nav-item" data-view="swap"><span>⇄</span>算力置换</button>
+        <button class="nav-item" data-view="quote"><span>⌁</span>智能报价</button>
+        <button class="nav-item" data-view="sell"><span>↗</span>出售算力</button>
+        <button class="nav-item" data-view="supplier"><span>▦</span>供应商工作台</button>
+      </nav>
+      <div class="side-status"><span class="live-dot"></span><div><b>服务端在线</b><small>报价与库存从服务端读取</small></div></div>
+      <div class="side-foot">KAI Cloud <span>企业版</span></div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div class="breadcrumb">KAI / <span id="crumb">算力市场</span></div>
+        <div class="system-strip" aria-label="系统能力状态"><span><i></i>报价服务 <b>正常</b></span><span>分时规则 <b>7 段</b></span><span>计价地区 <b>9 个</b></span></div>
+        <div class="top-actions"><label class="mode-picker"><span>外观</span><select id="colorMode" aria-label="外观模式"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></label><button class="ghost icon-btn" id="noticeBtn" aria-label="通知">●</button><button class="account"><span>KC</span><div><b>KAI 企业账户</b><small>已完成企业认证</small></div><i>⌄</i></button></div>
+      </header>
+
+      <section class="view active" id="marketView">
+        <div class="hero">
+          <div><div class="eyebrow"><span class="live-dot"></span>企业算力交易与容量管理</div><h1>按产品、地区和时段，<br><em>找到可交付的算力。</em></h1><p>统一查看 GPU、Token、柜月与整机服务器的报价口径、可售容量和交付条件。报价依据、订单状态和容量变化都可追溯。</p><div class="hero-actions"><button class="primary" id="showMarketChart">查看报价走势 <span>↓</span></button><button class="secondary" data-jump="quote">按需求询价</button></div></div>
+          <aside class="market-brief" aria-label="市场数据口径"><div class="market-brief-head"><span>当前市场</span><b id="marketBriefStatus">服务端同步中</b></div><dl><div><dt>已验真挂牌</dt><dd id="marketBriefListings">—</dd></div><div><dt>GPU 可售容量</dt><dd id="marketBriefCapacity">—</dd></div><div><dt>覆盖地区</dt><dd id="marketBriefRegions">—</dd></div></dl><p>这里展示平台内已验真挂牌，不使用演示成交额或虚构成交量。</p></aside>
+        </div>
+
+        <section class="market-chart-panel" id="marketChartPanel" aria-labelledby="marketChartTitle">
+          <div class="market-index-hero"><div><span class="eyebrow">KAI COMPUTE MARKET INDEX</span><h2 id="marketChartTitle">算力价格趋势</h2><p>聚合同口径报价，追踪 GPU、Token、柜月与服务器在不同地区和时间周期内的价格变化。</p></div><div class="market-index-status"><small>行情状态</small><strong class="market-source" id="marketChartSource">读取中</strong><span id="marketUpdatedAt">等待服务端同步</span></div></div>
+          <div class="market-overview-stats" aria-label="行情总览"><div><small>覆盖产品</small><strong id="marketOverviewTotal">—</strong><span>当前分类</span></div><div><small>上涨</small><strong id="marketOverviewUp">—</strong><span>红色表示上涨</span></div><div><small>下跌</small><strong id="marketOverviewDown">—</strong><span>绿色表示下跌</span></div><div><small>持平 / 暂无</small><strong id="marketOverviewFlat">—</strong><span>变化小于 0.01%</span></div></div>
+          <div class="market-terminal-filters">
+            <div class="market-kind-tabs" role="tablist" aria-label="行情类型"><button class="active" type="button" data-market-kind="gpu" role="tab" aria-selected="true">GPU</button><button type="button" data-market-kind="token" role="tab" aria-selected="false">Token</button><button type="button" data-market-kind="rack" role="tab" aria-selected="false">柜月</button><button type="button" data-market-kind="server" role="tab" aria-selected="false">服务器</button></div>
+            <div class="market-chart-controls"><label class="market-search-control">搜索产品<input id="marketProductSearch" type="search" placeholder="搜索型号、模型或规格" autocomplete="off" /></label><label>产品<select id="marketProduct"></select></label><label>地区<select id="marketRegion"></select></label></div>
+          </div>
+          <p class="market-interval-help market-visually-hidden" id="marketIntervalHelp"><b>怎么看：</b>“15分钟”表示图中每个点或每根蜡烛汇总连续 15 分钟内的报价；切换周期只改变聚合粒度，不是评分，也不是购买时长。</p>
+          <div class="market-terminal-grid">
+            <aside class="market-watchlist" aria-labelledby="marketWatchlistTitle"><div class="market-watchlist-head"><div><h3 id="marketWatchlistTitle">产品行情</h3><span id="marketWatchlistCount">正在读取</span></div><small>点击产品查看详情</small></div><div class="market-watchlist-body" id="marketWatchlist" aria-live="polite"><div class="market-watchlist-loading">正在聚合当前分类报价…</div></div></aside>
+            <section class="market-detail" aria-labelledby="marketDetailName">
+              <div class="market-detail-head"><div><small id="marketDetailMeta">产品 · 地区 · 计价单位</small><h3 id="marketDetailName">正在读取行情</h3></div><div class="market-detail-price"><strong id="marketLastPrice">—</strong><span id="marketChange">—</span><small id="marketDetailUnit">—</small></div></div>
+              <div class="market-chart-stats"><div><small>区间开盘</small><strong id="marketOpenPrice">—</strong></div><div><small>区间最高</small><strong id="marketHigh">—</strong></div><div><small>区间最低</small><strong id="marketLow">—</strong></div><div><small>报价活跃度</small><strong id="marketVolume">—</strong></div></div>
+              <div class="binance-chart-shell">
+                <div class="binance-chart-toolbar">
+                  <div class="binance-time-tools">
+                    <button type="button" data-market-chart-mode="line">Time</button><button type="button" disabled>1s</button>
+                    <div class="market-intervals" aria-label="K 线时间周期"><button type="button" data-market-interval="5m">5m</button><button class="active" type="button" data-market-interval="15m">15m</button><button type="button" data-market-interval="1h">1H</button><button type="button" data-market-interval="4h">4H</button><button type="button" data-market-interval="1d">1D</button><button type="button" data-market-interval="1w">1W</button><button type="button" data-market-interval="1mo">1M</button></div><span class="binance-caret">▾</span><span class="binance-toolbar-separator"></span><button type="button" aria-label="选择日期" disabled>▣</button><button type="button" aria-label="放大图表" data-market-zoom="in">⊕</button><button type="button" aria-label="均线指标" data-market-indicator="ma">⌁</button><button type="button" aria-label="成交量指标" data-market-indicator="volume">≋</button><button type="button" aria-label="缩小图表" data-market-zoom="out">⊖</button><button type="button" aria-label="图表设置" disabled>⚙</button>
+                  </div>
+                  <div class="market-chart-modes" aria-label="图表显示方式"><button class="active" type="button" data-market-chart-mode="candle">Original</button><button type="button" disabled>Trading View</button><button type="button" disabled>Depth</button></div>
+                </div>
+                <div class="binance-chart-readout"><div><span>⌄</span><span id="marketChartTimestamp">—</span><span>Open <b id="marketChartOpen">—</b></span><span>High <b id="marketChartHigh">—</b></span><span>Low <b id="marketChartLow">—</b></span><span>Close <b id="marketChartClose">—</b></span><span>CHANGE <b id="marketChartChange">—</b></span><span>Range <b id="marketChartRange">—</b></span></div><div class="binance-ma-readout"><span>MA(7) <b id="marketMa7">—</b></span><span>MA(25) <b id="marketMa25">—</b></span><span>MA(99) <b id="marketMa99">—</b></span><span class="market-visually-hidden" id="marketChartPeriodLabel">15分钟 K · 人民币</span></div></div>
+                <div class="market-chart-stage"><svg id="marketCandleChart" viewBox="0 0 960 440" preserveAspectRatio="none" role="img" aria-label="平台参考报价趋势图"></svg><div class="market-chart-tooltip" id="marketChartTooltip" hidden></div><div class="market-chart-loading" id="marketChartLoading">正在读取报价流…</div></div>
+                <div class="binance-chart-footer" aria-hidden="true"><div><span>⌁</span><span>%</span><span>≋</span></div><span>⛶</span></div>
+              </div>
+              <div class="market-price-layers" aria-label="三层价格"><div><span>市场参考价</span><strong id="marketLayerReference">—</strong><small>同口径报价聚合</small></div><div><span>供应商要价区间</span><strong id="marketLayerSupplier">—</strong><small>底价不公开</small></div><div><span>订单执行价</span><strong>下单时固化</strong><small>固定价、询价或协商确认</small></div></div>
+              <div class="market-chart-foot"><span id="marketChartNotice">报价变化用于市场比较，不替代订单执行价。</span><button type="button" class="text-btn" id="refreshMarketChart">刷新报价 · 15秒自动更新</button></div>
+            </section>
+          </div>
+        </section>
+
+        <div class="section-head"><div><span class="eyebrow">已验真挂牌</span><h2>当前可售资源</h2></div><button class="text-btn" data-jump="quote">按条件筛选报价 →</button></div>
+        <div class="filters"><button class="chip active" data-filter="all">全部</button><button class="chip" data-filter="gpu">GPU 算力</button><button class="chip" data-filter="token">Token 大模型</button><button class="chip" data-filter="rack">柜月</button><label class="search"><span>⌕</span><input id="marketSearch" placeholder="搜索 GPU、模型、柜月或厂商" /></label></div>
+        <div class="offer-grid" id="offerGrid"></div>
+      </section>
+
+      <section class="view" id="vaultView">
+        <div class="page-title"><div><span class="eyebrow">资产台账</span><h1>我的算力库</h1><p>已购算力在这里存入、分配、置换或挂单出售。</p></div><button class="primary" data-jump="market">+ 购入算力</button></div>
+        <div class="stat-grid"><div class="stat"><small>可用算力价值</small><strong id="vaultValue">¥ 92,460</strong><span>按当前中间价估值</span></div><div class="stat"><small>剩余 GPU 时</small><strong id="vaultHours">11,040</strong><span>跨 3 类资产</span></div><div class="stat"><small>本月节省</small><strong>¥ 18,240</strong><span class="up">较按需价 ↓ 16.4%</span></div></div>
+        <div class="panel"><div class="panel-head"><h2>资产明细</h2><div class="seg"><button class="active">可用</button><button>使用中</button><button>已到期</button></div></div><div class="asset-table" id="assetTable"></div></div>
+      </section>
+
+      <section class="view" id="swapView">
+        <div class="page-title"><div><span class="eyebrow">资产置换</span><h1>算力置换</h1><p>将闲置时段与不匹配的 GPU，换成更适合当前模型的算力。</p></div></div>
+        <div class="swap-layout"><div class="swap-card"><div class="step-label">01 / 付出资产</div><label>从算力库选择<select id="swapFrom"><option>A100 80GB · 华北 · 2,400 GPU时</option><option>昇腾 910B · 华东 · 4,320 GPU时</option><option>H800 80GB · 华南 · 4,320 GPU时</option></select></label><label>置换数量<div class="input-unit"><input id="swapHours" type="number" value="1000" min="1"><span>GPU 时</span></div></label><div class="asset-note"><span>当前中间价</span><b id="fromValue">¥ 9,820</b></div></div><button class="swap-arrow" aria-label="交换方向">⇄</button><div class="swap-card accent-card"><div class="step-label">02 / 目标资产</div><label>目标 GPU<select id="swapTo"><option value="H100">NVIDIA H100 80GB</option><option value="H200">NVIDIA H200 141GB</option><option value="910B">华为昇腾 910B</option><option value="MI300X">AMD MI300X</option></select></label><label>目标模型<select id="swapModel"></select></label><div class="asset-note"><span>预计获得</span><b id="swapReceive">603 GPU 时</b></div></div></div>
+        <div class="quote-breakdown"><div><span class="eyebrow">可解释报价</span><h2 id="swapRate">1 A100 时 = 0.603 H100 时</h2><p>报价锁定 15 分钟，实际交割以资源验收结果为准。</p></div><div class="factor-list" id="swapFactors"></div><button class="primary" id="confirmSwap">确认置换 <span>→</span></button></div>
+      </section>
+
+      <section class="view" id="quoteView">
+        <div class="page-title"><div><span class="eyebrow">按需报价</span><h1>智能报价</h1><p>按模型工作负载、昼夜时段、地区和可售供给拆解报价。</p></div><span class="model-count">覆盖 <b>100</b> 个主流模型</span></div>
+        <div class="quote-layout"><form class="quote-form" id="quoteForm"><div class="form-grid"><label>目标模型<select id="modelSelect"></select></label><label>任务类型<select id="taskType"><option value="inference">在线推理</option><option value="training">全量训练</option><option value="finetune">微调 / LoRA</option></select></label><label>GPU 型号<select id="gpuSelect"><option value="H100">NVIDIA H100 80GB</option><option value="H200">NVIDIA H200 141GB</option><option value="A100">NVIDIA A100 80GB</option><option value="H800">NVIDIA H800 80GB</option><option value="MI300X">AMD MI300X</option><option value="910B">华为昇腾 910B</option></select></label><label>服务厂商<select id="vendorSelect"><option value="kai">KAI 联合资源池</option><option value="aliyun">阿里云</option><option value="tencent">腾讯云</option><option value="huawei">华为云</option><option value="volc">火山引擎</option></select></label><label>使用时长<div class="input-unit"><input id="hoursInput" type="number" value="720" min="1"><span>GPU 时</span></div></label><label>开始时间<input id="startDate" type="date"></label></div><fieldset><legend>服务等级</legend><div class="radio-row"><label><input type="radio" name="sla" value="spot"><span><b>弹性竞价</b><small>可中断 · 最低价</small></span></label><label><input type="radio" name="sla" value="standard" checked><span><b>标准保障</b><small>99.5% 可用性</small></span></label><label><input type="radio" name="sla" value="premium"><span><b>关键任务</b><small>99.95% + 专属支持</small></span></label></div></fieldset><button class="primary wide" type="submit">重新计算报价 <span>↗</span></button></form>
+          <aside class="result-card"><div class="result-top"><span>建议成交价</span><small id="quoteId">QUOTE · KAI-0814</small></div><div class="result-price"><small>¥</small><strong id="totalPrice">8,424</strong><span>含税</span></div><div class="unit-price" id="unitPrice">¥ 11.70 / GPU 时</div><div class="confidence"><div><span>报价置信度</span><b id="confidenceText">92 / 100</b></div><div><i style="width:92%"></i></div></div><div class="result-factors" id="quoteFactors"></div><button class="primary wide" id="buyQuote">按此报价购入</button><p class="fineprint">这是市场参考价；创建订单时会固化服务端执行价、容量版本和有效期。</p></aside></div>
+        <div class="panel model-panel"><div class="panel-head"><div><span class="eyebrow">模型与厂商</span><h2>100 个模型定价覆盖</h2></div><label class="search"><span>⌕</span><input id="modelSearch" placeholder="筛选模型或厂商"></label></div><div class="model-cloud" id="modelCloud"></div></div>
+      </section>
+
+      <section class="view" id="sellView">
+        <div class="page-title"><div><span class="eyebrow">供应商报价</span><h1>出售闲置算力</h1><p>根据可售时间、资源类型、地区和履约条件生成挂牌参考价。</p></div></div>
+        <div class="sell-layout"><form class="quote-form" id="sellForm"><div class="form-grid"><label>出售资产<select id="sellAsset"><option value="A100">A100 80GB · 华北资源池</option><option value="H800">H800 80GB · 华南资源池</option><option value="910B">昇腾 910B · 华东资源池</option></select></label><label>可用时长<div class="input-unit"><input id="sellHours" type="number" value="500" min="1"><span>GPU 时</span></div></label><label>可用开始<input id="sellStart" type="datetime-local"></label><label>可用结束<input id="sellEnd" type="datetime-local"></label><label>托管厂商<select id="sellVendor"><option value="verified">KAI 已验资源池</option><option value="cloud">认证云厂商</option><option value="private">企业自有机房</option></select></label><label>网络与交付<select id="network"><option value="premium">RDMA 集群 · 30 分钟交付</option><option value="standard">标准网络 · 2 小时交付</option><option value="basic">公网接入 · 人工交付</option></select></label></div><label class="check"><input type="checkbox" checked><span>接受 KAI 资源验收与基准测试</span></label><button class="primary wide" type="submit">生成出售建议价</button></form><aside class="sell-result"><span class="eyebrow">SELLING RANGE</span><h2>建议挂牌区间</h2><div class="range"><strong id="sellLow">¥ 3,980</strong><span>—</span><strong id="sellHigh">¥ 4,420</strong></div><p id="sellUnit">约 ¥ 8.40 / GPU 时</p><div class="demand-meter"><div><span>当前需求热度</span><b>旺盛</b></div><i><u style="width:78%"></u></i></div><div class="result-factors" id="sellFactors"></div><button class="secondary wide" id="publishSell">按中间价发布</button></aside></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="checkout"><button class="dialog-close" aria-label="关闭">×</button><div class="dialog-step active" data-step="pay"><span class="eyebrow">SERVER CHECKOUT</span><h2>确认购入算力</h2><div class="order-summary"><span>算力订单</span><b id="orderName">NVIDIA H100 · 720 GPU 时</b><strong id="orderTotal">¥ 8,424</strong></div><p>选择支付方式</p><div class="pay-options"><button class="pay active" data-pay="alipay"><i>支</i><span><b>支付宝</b><small>企业账户 / 个人账户</small></span><em>✓</em></button><button class="pay" data-pay="wechat"><i class="wx">微</i><span><b>微信支付</b><small>扫码支付</small></span><em></em></button></div><button class="primary wide" id="demoPay">创建服务端支付单</button><small class="security-note">支付完成页不直接改变订单状态；平台只接受服务端签名回调。</small></div><div class="dialog-step success" data-step="success"><div class="success-mark">✓</div><span class="eyebrow">PAYMENT VERIFIED</span><h2>支付已由服务端确认</h2><p>容量已经锁定，订单等待供应商交付与采购方验收。</p><button class="primary wide" data-jump="vault">查看订单进度</button></div></dialog>
+  <div class="toast" id="toast"><b>操作成功</b><span></span></div>
+  <script src="native-bridge.js"></script>
+  <script src="app.js"></script>
+  <script src="interactions.js"></script>
+  <script src="iterations.js"></script>
+  <script src="generations.js"></script>
+  <script src="assessment.js"></script>
+  <script src="production.js"></script>
+  <script src="market-chart.js"></script>
+  <script src="supplier-workbench.js"></script>
+  <script src="operations.js"></script>
+  <script src="design-system.js"></script>
+  <script src="h100-purchase.js"></script>
+  <script src="app-closure.js"></script>
+</body>
+</html>

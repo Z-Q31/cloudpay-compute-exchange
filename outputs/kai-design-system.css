@@ -1,0 +1,1038 @@
+/* KAI Cross-platform Design System v1.1 - Web mapping */
+:root {
+  --kai-brand-seed: #166534;
+  --kai-brand-hover: #14532d;
+  --kai-brand-pressed: #0f3d24;
+  --kai-brand-soft: #eef7f0;
+  --kai-canvas: #fbfdfb;
+  --kai-surface: #ffffff;
+  --kai-elevated: #ffffff;
+  --kai-ink: #15231a;
+  --kai-text: #3f5447;
+  --kai-muted: #5f7166;
+  --kai-border: #d5e4d9;
+  --kai-border-strong: #a7c9b2;
+  --kai-accent: #166534;
+  --kai-accent-hover: #14532d;
+  --kai-accent-pressed: #0f3d24;
+  --kai-success: #166534;
+  --kai-success-bg: #eef7f0;
+  --kai-warning: #8a5a00;
+  --kai-warning-bg: #fff8e7;
+  --kai-error: #b42318;
+  --kai-error-bg: #fef3f2;
+  --kai-info: #3f5447;
+  --kai-info-bg: #f3f8f4;
+  --kai-display: "DM Sans", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --kai-text-font: "Work Sans", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --kai-mono: "Noto Sans Mono CJK SC", "SFMono-Regular", Consolas, monospace;
+  --kai-radius-control: 4px;
+  --kai-radius-overlay: 8px;
+  --kai-space-1: 4px;
+  --kai-space-2: 8px;
+  --kai-space-3: 12px;
+  --kai-space-4: 16px;
+  --kai-space-6: 24px;
+  --kai-space-8: 32px;
+  --kai-space-12: 48px;
+  --kai-space-16: 64px;
+  --kai-motion-micro: 120ms;
+  --kai-motion-standard: 180ms;
+  --kai-motion-large: 240ms;
+
+  /* Compatibility for the existing application styles. */
+  --paper: var(--kai-canvas);
+  --white: var(--kai-surface);
+  --ink: var(--kai-ink);
+  --muted: var(--kai-muted);
+  --line: var(--kai-border);
+  --green: var(--kai-brand-seed);
+  --lime: var(--kai-accent);
+  --lime2: var(--kai-brand-soft);
+  --orange: var(--kai-warning);
+  --sans: var(--kai-text-font);
+  --mono: var(--kai-mono);
+  --shadow: none;
+}
+
+html[data-color-mode="dark"] {
+  --kai-brand-hover: #1f7a43;
+  --kai-brand-pressed: #155d32;
+  --kai-brand-soft: #173622;
+  --kai-canvas: #0b1510;
+  --kai-surface: #111f17;
+  --kai-elevated: #17271d;
+  --kai-ink: #f1f7f3;
+  --kai-text: #c9d8cf;
+  --kai-muted: #9fb2a6;
+  --kai-border: #2e4838;
+  --kai-border-strong: #506f5c;
+  --kai-accent: #86d69f;
+  --kai-accent-hover: #9ce2b1;
+  --kai-accent-pressed: #6fc389;
+  --kai-success: #86d69f;
+  --kai-success-bg: #173622;
+  --kai-warning: #f2c66d;
+  --kai-warning-bg: #352a14;
+  --kai-error: #ff9b8f;
+  --kai-error-bg: #3a1d1a;
+  --kai-info: #bfd0c5;
+  --kai-info-bg: #17291e;
+}
+
+html { color-scheme: light dark; scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--kai-canvas) !important;
+  background-image: none !important;
+  color: var(--kai-text) !important;
+  font: 400 16px/1.625 var(--kai-text-font) !important;
+  text-rendering: optimizeLegibility;
+}
+
+body::before,
+.hero::after,
+.offer::after,
+.market-pulse::before,
+.result-card::before,
+.swap-card::after,
+.recommend-hero::after,
+.interactive-glow,
+.click-ripple,
+.view.active::before,
+.view > .page-title::before,
+.section-head::before,
+.sci-orbit,
+.ambient-glow { display: none !important; }
+
+body * { text-shadow: none !important; }
+button, input, select, textarea { font-family: var(--kai-text-font) !important; }
+button, a, input, select, textarea { transition-duration: var(--kai-motion-micro) !important; transition-timing-function: ease-out !important; }
+a:not(.brand) { color: var(--kai-accent); text-decoration: underline; text-underline-offset: 3px; }
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--kai-accent) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+h1, h2, h3, h4, .brand, .result-price strong, .stat strong, .range strong {
+  color: var(--kai-ink) !important;
+  font-family: var(--kai-display) !important;
+}
+h1 { font-size: 40px !important; line-height: 1.2 !important; letter-spacing: -.025em !important; }
+h2 { font-size: 24px !important; line-height: 1.333 !important; letter-spacing: -.015em !important; }
+h3 { font-size: 20px !important; line-height: 1.4 !important; }
+p { color: var(--kai-text) !important; font-size: 16px !important; line-height: 1.625 !important; }
+small { color: var(--kai-muted) !important; font-size: 12px !important; line-height: 1.333 !important; }
+
+.shell { min-height: 100vh; grid-template-columns: 248px minmax(0, 1fr) !important; }
+main { grid-column: 2 !important; min-width: 0; }
+.sidebar {
+  width: 248px !important;
+  padding: 32px 24px 24px !important;
+  background: var(--kai-surface) !important;
+  background-image: none !important;
+  border-right: 1px solid var(--kai-border) !important;
+  color: var(--kai-text) !important;
+  box-shadow: none !important;
+}
+.brand { gap: 12px !important; padding: 0 !important; color: var(--kai-brand-seed) !important; font-size: 24px !important; text-decoration: none !important; letter-spacing: 0 !important; }
+.brand-mark { width: 40px !important; height: 40px !important; border-radius: 0 !important; background: transparent !important; color: var(--kai-brand-seed) !important; font: 700 30px/1 var(--kai-display) !important; }
+.brand-sub { margin-top: 3px; color: var(--kai-muted) !important; font: 500 12px/16px var(--kai-text-font) !important; letter-spacing: 0 !important; }
+.nav { gap: 4px !important; margin-top: 48px !important; }
+.nav::before { content: "交易任务" !important; padding: 0 16px 8px !important; color: var(--kai-muted) !important; font: 600 12px/16px var(--kai-text-font) !important; letter-spacing: 0 !important; }
+.nav-item {
+  position: relative;
+  min-height: 44px;
+  padding: 10px 12px 10px 16px !important;
+  border: 0 !important;
+  border-radius: var(--kai-radius-control) !important;
+  background: transparent !important;
+  color: var(--kai-text) !important;
+  font: 500 14px/22px var(--kai-text-font) !important;
+  gap: 0 !important;
+}
+.nav-item > span:first-child { display: none !important; }
+.nav-item:hover { background: var(--kai-info-bg) !important; color: var(--kai-ink) !important; }
+.nav-item.active { background: var(--kai-brand-soft) !important; color: var(--kai-accent) !important; font-weight: 600 !important; }
+.nav-item.active::before { content: ""; position: absolute; inset: 8px auto 8px 0; width: 2px; background: var(--kai-accent); }
+.nav-item.active::after { display: none !important; }
+.nav-item b { margin-left: auto; border-radius: 999px !important; background: var(--kai-info-bg) !important; color: var(--kai-muted) !important; font: 600 12px/16px var(--kai-mono) !important; }
+.side-status { gap: 10px; padding: 16px 0 !important; border-color: var(--kai-border) !important; }
+.side-status b { color: var(--kai-ink) !important; font-size: 14px !important; }
+.side-status small { margin-top: 4px !important; color: var(--kai-muted) !important; font: 12px/16px var(--kai-text-font) !important; }
+.side-foot { padding: 16px 0 0 !important; color: var(--kai-muted) !important; font: 12px/16px var(--kai-text-font) !important; }
+.side-foot span { color: var(--kai-muted) !important; }
+.live-dot { width: 8px; height: 8px; background: var(--kai-success) !important; box-shadow: none !important; }
+
+.topbar {
+  min-height: 72px !important;
+  height: auto !important;
+  padding: 12px 40px !important;
+  background: var(--kai-canvas) !important;
+  border-bottom: 1px solid var(--kai-border) !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+.breadcrumb { color: var(--kai-muted) !important; font: 12px/16px var(--kai-mono) !important; }
+.breadcrumb span { color: var(--kai-text) !important; }
+.system-strip { display: none !important; color: var(--kai-muted) !important; font-size: 12px !important; }
+.system-strip span, .system-strip b { color: var(--kai-muted) !important; font-size: 12px !important; }
+.system-strip span { border-color: var(--kai-border) !important; background: transparent !important; }
+.top-actions { gap: 12px !important; }
+.production-state {
+  min-width: 176px !important;
+  padding: 6px 10px !important;
+  border: 0 !important;
+  border-left: 1px solid var(--kai-border) !important;
+  background: transparent !important;
+}
+.production-state i { background: var(--kai-success) !important; box-shadow: none !important; }
+.production-state[data-state="offline"] i { background: var(--kai-error) !important; }
+.production-state b { color: var(--kai-ink) !important; font-size: 12px !important; line-height: 16px !important; }
+.production-state small { margin-top: 2px !important; color: var(--kai-muted) !important; font: 12px/16px var(--kai-text-font) !important; }
+.density-toggle, .command-trigger {
+  min-height: 44px !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--kai-border-strong) !important;
+  border-radius: var(--kai-radius-control) !important;
+  background: transparent !important;
+  color: var(--kai-text) !important;
+  font: 600 14px/20px var(--kai-text-font) !important;
+  transform: none !important;
+}
+.density-toggle:hover, .command-trigger:hover { border-color: var(--kai-accent) !important; background: var(--kai-brand-soft) !important; color: var(--kai-accent) !important; }
+.density-toggle i { color: var(--kai-accent) !important; }
+.command-trigger kbd { padding: 0 !important; border: 0 !important; background: transparent !important; color: var(--kai-muted) !important; font: 12px/16px var(--kai-mono) !important; }
+.mode-picker { display: grid; gap: 2px; color: var(--kai-muted); font-size: 12px; line-height: 16px; }
+.mode-picker select { min-width: 112px; height: 44px; padding: 0 32px 0 12px; border: 1px solid var(--kai-border-strong); border-radius: var(--kai-radius-control); background: var(--kai-surface); color: var(--kai-text); font-size: 14px; }
+.icon-btn { width: 44px !important; height: 44px !important; border: 1px solid var(--kai-border-strong) !important; border-radius: var(--kai-radius-control) !important; color: var(--kai-warning) !important; font-size: 12px !important; }
+.account { min-height: 44px; color: var(--kai-text) !important; }
+.account > span { width: 36px !important; height: 36px !important; border: 1px solid var(--kai-border) !important; border-radius: var(--kai-radius-control) !important; background: var(--kai-brand-soft) !important; color: var(--kai-accent) !important; font: 600 12px var(--kai-mono) !important; }
+.account b { color: var(--kai-ink) !important; font-size: 14px !important; }
+.account small { color: var(--kai-muted) !important; font-size: 12px !important; }
+
+.view { max-width: 1440px !important; padding: 48px 48px 96px !important; }
+.view.active { animation: kai-enter var(--kai-motion-large) ease-out !important; }
+@keyframes kai-enter { from { opacity: 0; } to { opacity: 1; } }
+.hero { grid-template-columns: minmax(0, 7fr) minmax(320px, 5fr) !important; gap: 48px !important; align-items: start !important; padding: 48px 0 64px !important; }
+.hero h1 { max-width: 760px; margin: 16px 0 24px !important; font-size: 56px !important; line-height: 1.143 !important; }
+.hero h1 em { color: var(--kai-ink) !important; font-style: normal !important; }
+.hero p, .page-title p { max-width: 720px !important; color: var(--kai-text) !important; font-size: 18px !important; line-height: 1.667 !important; }
+.eyebrow { color: var(--kai-accent) !important; font: 600 12px/16px var(--kai-text-font) !important; letter-spacing: .04em !important; text-transform: none !important; }
+.eyebrow::before { display: none !important; }
+.hero-actions { gap: 12px !important; margin-top: 32px !important; }
+
+button { min-height: 44px; }
+.primary, .secondary, .text-btn, .chip, .seg button, .market-kind-tabs button, .market-intervals button {
+  font: 600 14px/20px var(--kai-text-font) !important;
+}
+.primary {
+  padding: 12px 16px !important;
+  border: 1px solid var(--kai-brand-seed) !important;
+  border-radius: var(--kai-radius-control) !important;
+  background: var(--kai-brand-seed) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+.primary:hover { background: var(--kai-brand-hover) !important; border-color: var(--kai-brand-hover) !important; }
+.primary:active { background: var(--kai-brand-pressed) !important; border-color: var(--kai-brand-pressed) !important; }
+.primary span { margin-left: 16px !important; color: #fff !important; }
+.secondary {
+  padding: 12px 16px !important;
+  border: 1px solid var(--kai-accent) !important;
+  border-radius: var(--kai-radius-control) !important;
+  background: transparent !important;
+  color: var(--kai-accent) !important;
+}
+.secondary:hover { background: var(--kai-brand-soft) !important; }
+.text-btn { min-height: 44px; padding: 8px 0 !important; color: var(--kai-accent) !important; text-decoration: underline; text-underline-offset: 3px; }
+button:disabled, input:disabled, select:disabled { color: #7d8b8d !important; cursor: not-allowed !important; }
+
+.market-brief {
+  align-self: stretch;
+  padding: 24px !important;
+  border: 1px solid var(--kai-border-strong) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.market-brief-head { padding-bottom: 16px !important; border-bottom: 1px solid var(--kai-border) !important; color: var(--kai-muted) !important; font-size: 12px !important; }
+.market-brief-head span, .market-brief-head b { font-size: 12px !important; }
+.market-brief-head b { color: var(--kai-success) !important; }
+.market-brief dl { gap: 0 !important; }
+.market-brief dl > div { padding: 16px 0 !important; border-bottom: 1px solid var(--kai-border) !important; }
+.market-brief dt { color: var(--kai-muted) !important; font-size: 12px !important; }
+.market-brief dd { color: var(--kai-ink) !important; font: 600 24px/32px var(--kai-display) !important; }
+.market-brief p { margin-bottom: 0 !important; font-size: 14px !important; line-height: 22px !important; }
+
+.section-head, .page-title, .panel-head { gap: 24px; }
+.page-title { border-color: var(--kai-border) !important; }
+.page-title::after { background: var(--kai-accent) !important; box-shadow: none !important; }
+.page-title { margin-bottom: 48px !important; align-items: flex-end !important; }
+.page-title h1 { margin: 8px 0 !important; font-size: 40px !important; line-height: 48px !important; }
+.section-head h2, .panel-head h2 { margin: 4px 0 0 !important; font-size: 24px !important; line-height: 32px !important; }
+.model-count { padding: 12px 16px !important; border: 1px solid var(--kai-border) !important; border-radius: 0 !important; background: transparent !important; color: var(--kai-text) !important; font: 14px/22px var(--kai-text-font) !important; }
+.model-count b { color: var(--kai-accent) !important; font-size: 24px !important; }
+
+.filters { gap: 8px !important; margin: 24px 0 !important; }
+.chip { padding: 10px 14px !important; border: 1px solid var(--kai-border-strong) !important; border-radius: 999px !important; background: transparent !important; color: var(--kai-text) !important; }
+.chip.active { border-color: var(--kai-accent) !important; background: var(--kai-brand-soft) !important; color: var(--kai-accent) !important; }
+.search { min-height: 44px; padding: 0 4px !important; border-color: var(--kai-border-strong) !important; }
+.search input { color: var(--kai-text) !important; font-size: 14px !important; }
+.search input::placeholder, input::placeholder { color: var(--kai-muted) !important; }
+
+.offer-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 24px !important; }
+.offer, .offer-card {
+  padding: 24px !important;
+  border: 1px solid var(--kai-border) !important;
+  border-radius: var(--kai-radius-control) !important;
+  background: var(--kai-surface) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+.offer:hover, .offer-card:hover { border-color: var(--kai-border-strong) !important; background: var(--kai-surface) !important; transform: none !important; }
+.gpu-badge { width: 44px !important; height: 44px !important; border-color: var(--kai-border) !important; border-radius: var(--kai-radius-control) !important; background: var(--kai-brand-soft) !important; color: var(--kai-accent) !important; font: 600 12px var(--kai-mono) !important; }
+.verified { color: var(--kai-success) !important; font: 600 12px/16px var(--kai-text-font) !important; }
+.offer h3 { margin: 24px 0 4px !important; color: var(--kai-ink) !important; font-size: 20px !important; }
+.offer-vendor { color: var(--kai-muted) !important; font-size: 14px !important; }
+.offer-tags { flex-wrap: wrap; gap: 8px !important; margin: 16px 0 !important; }
+.offer-tags span { padding: 4px 8px !important; border-radius: 999px !important; background: var(--kai-info-bg) !important; color: var(--kai-text) !important; font-size: 12px !important; }
+.offer-price { padding-top: 16px !important; border-color: var(--kai-border) !important; }
+.offer-price strong { color: var(--kai-ink) !important; font: 600 24px/32px var(--kai-display) !important; }
+.offer-price small { color: var(--kai-muted) !important; font-size: 12px !important; }
+.offer-price button { min-height: 44px; padding: 10px 12px !important; border-radius: var(--kai-radius-control) !important; background: var(--kai-brand-seed) !important; color: #fff !important; }
+
+.stat-grid { gap: 24px !important; margin-bottom: 32px !important; }
+.stat {
+  padding: 24px 0 !important;
+  border: 0 !important;
+  border-block: 1px solid var(--kai-border) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+.stat small, .stat span { color: var(--kai-muted) !important; font-size: 14px !important; line-height: 22px !important; }
+.stat strong { margin: 16px 0 8px !important; color: var(--kai-ink) !important; font: 600 40px/48px var(--kai-display) !important; }
+.stat .up { color: var(--kai-success) !important; }
+
+.panel,
+.quote-form,
+.result-card,
+.sell-result,
+.swap-card,
+.pricing-method,
+.recommend-card,
+.enterprise-panel,
+.enterprise-status-card,
+.assessment-panel,
+.capacity-ledger-panel,
+.withdrawal-panel,
+.withdraw-request-panel,
+.rmb-standard-panel,
+.bilateral-swap-panel,
+.live-orders-panel,
+.metering-panel,
+.consistency-panel,
+.connector-trust-panel {
+  border: 1px solid var(--kai-border) !important;
+  border-radius: var(--kai-radius-control) !important;
+  background: var(--kai-surface) !important;
+  background-image: none !important;
+  color: var(--kai-text) !important;
+  box-shadow: none !important;
+}
+.panel, .quote-form, .result-card, .sell-result, .recommend-card { padding: 24px !important; }
+.panel-head { margin-bottom: 24px !important; }
+.seg { padding: 4px !important; border-radius: var(--kai-radius-control) !important; background: var(--kai-info-bg) !important; }
+.seg button { padding: 8px 12px !important; color: var(--kai-muted) !important; }
+.seg .active { border-radius: 2px !important; background: var(--kai-surface) !important; color: var(--kai-accent) !important; box-shadow: none !important; }
+.asset-row { gap: 16px !important; padding: 16px 4px !important; border-color: var(--kai-border) !important; }
+.asset-name small, .asset-row > div > small { color: var(--kai-muted) !important; font-size: 12px !important; }
+.asset-row > div > b { color: var(--kai-ink) !important; font: 600 14px/22px var(--kai-mono) !important; }
+.asset-actions { flex-wrap: wrap; gap: 8px !important; }
+.asset-actions button { min-height: 44px; padding: 10px 12px !important; border: 1px solid var(--kai-border-strong) !important; border-radius: var(--kai-radius-control) !important; background: transparent !important; color: var(--kai-accent) !important; font-size: 14px !important; }
+
+.swap-layout { max-width: 1100px !important; grid-template-columns: 1fr 48px 1fr !important; }
+.swap-card { min-height: 0 !important; padding: 24px !important; }
+.accent-card { border-top: 3px solid var(--kai-brand-seed) !important; }
+.step-label { margin-bottom: 24px !important; color: var(--kai-accent) !important; font: 600 12px/16px var(--kai-text-font) !important; }
+.swap-arrow { width: 44px !important; height: 44px !important; border: 1px solid var(--kai-border-strong) !important; border-radius: 50% !important; background: var(--kai-surface) !important; color: var(--kai-accent) !important; box-shadow: none !important; }
+.swap-card label, .quote-form label, .enterprise-form-grid label, .assess-grid label, .withdrawal-grid label, .transaction-form-grid label, .token-order-builder label { color: var(--kai-text) !important; font-size: 14px !important; line-height: 22px !important; }
+input:not([type="radio"]):not([type="checkbox"]), select, textarea {
+  min-height: 44px !important;
+  padding: 10px 12px !important;
+  border: 1px solid var(--kai-border-strong) !important;
+  border-radius: var(--kai-radius-control) !important;
+  background: var(--kai-surface) !important;
+  color: var(--kai-ink) !important;
+  font-size: 16px !important;
+}
+select option { background: var(--kai-surface) !important; color: var(--kai-text) !important; }
+.input-unit { border: 0 !important; gap: 8px; }
+.input-unit span { color: var(--kai-muted) !important; font-size: 14px !important; }
+.asset-note { border-color: var(--kai-border) !important; }
+.asset-note span { color: var(--kai-muted) !important; font-size: 14px !important; }
+.asset-note b { color: var(--kai-ink) !important; font: 600 24px/32px var(--kai-display) !important; }
+.quote-breakdown { max-width: 1100px !important; padding: 24px !important; border: 0 !important; border-left: 3px solid var(--kai-accent) !important; border-radius: 0 !important; background: var(--kai-brand-soft) !important; background-image: none !important; }
+.quote-breakdown h2 { color: var(--kai-ink) !important; font: 600 20px/28px var(--kai-display) !important; }
+.quote-breakdown p { color: var(--kai-text) !important; font-size: 14px !important; line-height: 22px !important; }
+.factor-list div, .result-factors div { color: var(--kai-text) !important; font-size: 14px !important; line-height: 22px !important; }
+.factor-list b, .result-factors b { color: var(--kai-ink) !important; font: 600 14px/22px var(--kai-mono) !important; }
+
+.quote-layout, .sell-layout { grid-template-columns: minmax(0, 8fr) minmax(320px, 4fr) !important; gap: 24px !important; }
+.form-grid { gap: 0 24px !important; }
+.quote-form legend { margin-bottom: 12px !important; color: var(--kai-text) !important; font-size: 14px !important; }
+.radio-row { gap: 8px !important; }
+.radio-row span { min-height: 72px; padding: 12px !important; border-color: var(--kai-border) !important; border-radius: var(--kai-radius-control) !important; background: transparent !important; }
+.radio-row small { margin-top: 4px !important; color: var(--kai-muted) !important; font-size: 12px !important; }
+.radio-row input:checked + span { border-color: var(--kai-accent) !important; background: var(--kai-brand-soft) !important; }
+.result-card { position: sticky !important; top: 96px !important; border-top: 3px solid var(--kai-brand-seed) !important; }
+.result-top { color: var(--kai-muted) !important; font-size: 12px !important; }
+.result-price { margin: 32px 0 8px !important; }
+.result-price strong { color: var(--kai-ink) !important; font: 600 56px/64px var(--kai-display) !important; }
+.result-price small { color: var(--kai-muted) !important; font-size: 16px !important; }
+.result-price span { color: var(--kai-muted) !important; font-size: 12px !important; }
+.unit-price { color: var(--kai-accent) !important; font: 600 16px/26px var(--kai-mono) !important; }
+.confidence > div:first-child { color: var(--kai-text) !important; font-size: 14px !important; }
+.confidence > div:last-child { height: 4px !important; background: var(--kai-border) !important; }
+.confidence i { background: var(--kai-accent) !important; }
+.result-factors { border-color: var(--kai-border) !important; color: var(--kai-text) !important; }
+.fineprint { color: var(--kai-muted) !important; font-size: 12px !important; line-height: 20px !important; }
+.model-panel { margin-top: 24px !important; }
+.model-cloud { gap: 8px !important; max-height: 320px !important; }
+.model-pill { min-height: 36px !important; padding: 8px 12px !important; border: 1px solid var(--kai-border) !important; border-radius: 999px !important; background: transparent !important; color: var(--kai-text) !important; font: 12px/18px var(--kai-text-font) !important; }
+.model-pill:hover { border-color: var(--kai-border-strong) !important; background: var(--kai-info-bg) !important; }
+.model-pill.active { border-color: var(--kai-accent) !important; background: var(--kai-brand-soft) !important; color: var(--kai-accent) !important; }
+.sell-result { border-top: 3px solid var(--kai-brand-seed) !important; }
+.range strong { color: var(--kai-ink) !important; font: 600 32px/40px var(--kai-display) !important; }
+.sell-result > p { color: var(--kai-text) !important; font: 14px/22px var(--kai-mono) !important; }
+.demand-meter div { color: var(--kai-text) !important; font-size: 14px !important; }
+.demand-meter i { background: var(--kai-border) !important; }
+.demand-meter u { background: var(--kai-accent) !important; }
+
+.market-chart-panel { margin-bottom: 64px !important; padding: 24px !important; border: 1px solid var(--kai-border) !important; border-radius: 0 !important; background: var(--kai-surface) !important; }
+.market-chart-head h2 { margin: 4px 0 8px !important; }
+.market-chart-head p { margin: 0 !important; font-size: 14px !important; line-height: 22px !important; }
+.market-source { padding: 6px 8px !important; border: 1px solid var(--kai-border-strong) !important; border-radius: 999px; color: var(--kai-muted) !important; font-size: 12px !important; }
+.market-source[data-source="verified_listing"] { border-color: var(--kai-accent) !important; color: var(--kai-accent) !important; }
+.market-kind-tabs { gap: 24px !important; border-color: var(--kai-border) !important; }
+.market-kind-tabs button { color: var(--kai-muted) !important; }
+.market-kind-tabs button.active { border-bottom-color: var(--kai-accent) !important; color: var(--kai-accent) !important; }
+.market-chart-controls { flex-wrap: wrap !important; }
+.market-chart-controls label { color: var(--kai-text) !important; font-size: 14px !important; }
+.market-chart-controls select { min-width: 220px; }
+.market-interval-control { width: 100%; margin-left: 0 !important; }
+.market-intervals { margin-left: 0 !important; flex-wrap: wrap; }
+.market-intervals button { min-width: 52px; padding: 10px 12px !important; border: 1px solid var(--kai-border-strong) !important; border-radius: var(--kai-radius-control) !important; background: transparent !important; color: var(--kai-text) !important; }
+.market-intervals button.active { border-color: var(--kai-accent) !important; background: var(--kai-brand-soft) !important; color: var(--kai-accent) !important; }
+.market-chart-stats { border-color: var(--kai-border) !important; }
+.market-chart-stats div { border-color: var(--kai-border) !important; }
+.market-chart-stats small { color: var(--kai-muted) !important; font-size: 12px !important; }
+.market-chart-stats strong { color: var(--kai-ink) !important; font: 600 16px/26px var(--kai-mono) !important; }
+#marketChange[data-direction="up"] { color: var(--kai-success) !important; }
+#marketChange[data-direction="down"] { color: var(--kai-error) !important; }
+.market-grid-line { stroke: var(--kai-border) !important; }
+.market-divider { stroke: var(--kai-border-strong) !important; }
+.market-axis-label, .market-time-label { fill: var(--kai-muted) !important; font: 12px var(--kai-mono) !important; }
+.market-wick.rise { stroke: var(--kai-accent) !important; }
+.market-wick.fall { stroke: var(--kai-error) !important; }
+.market-candle.rise, .market-volume.rise { fill: var(--kai-accent) !important; }
+.market-candle.fall, .market-volume.fall { fill: var(--kai-error) !important; }
+.market-chart-tooltip { border-color: var(--kai-border-strong) !important; border-radius: var(--kai-radius-control); background: var(--kai-elevated) !important; color: var(--kai-text) !important; font: 12px/18px var(--kai-mono) !important; box-shadow: 0 8px 24px rgba(0,0,0,.16) !important; }
+.market-chart-loading { color: var(--kai-muted) !important; background: color-mix(in srgb, var(--kai-surface) 92%, transparent) !important; }
+.market-chart-foot { border-color: var(--kai-border) !important; color: var(--kai-muted) !important; font-size: 12px !important; line-height: 20px !important; }
+
+/* Capacity hub and its linked order/withdrawal surfaces must inherit the same
+   light/dark palette instead of the legacy dark-blue component colors. */
+#capacityView .capacity-hub-stats article,
+#capacityView .capacity-route-grid button,
+#capacityView .capacity-lifecycle {
+  border-color: var(--kai-border) !important;
+  background: var(--kai-surface) !important;
+  background-image: none !important;
+  color: var(--kai-text) !important;
+  box-shadow: none !important;
+}
+#capacityView .capacity-hub-stats small,
+#capacityView .capacity-hub-stats span,
+#capacityView .capacity-route-grid small,
+#capacityView .capacity-lifecycle span {
+  color: var(--kai-text) !important;
+  font-size: 14px !important;
+  line-height: 22px !important;
+}
+#capacityView .capacity-hub-stats strong {
+  color: var(--kai-ink) !important;
+  font: 600 32px/40px var(--kai-display) !important;
+}
+#capacityView .capacity-route-grid b {
+  color: var(--kai-ink) !important;
+  font-size: 18px !important;
+  line-height: 26px !important;
+}
+#capacityView .capacity-route-grid i,
+#capacityView .capacity-route-grid em,
+#capacityView .capacity-lifecycle i {
+  color: var(--kai-accent) !important;
+  font-size: 13px !important;
+}
+#capacityView .capacity-route-grid button:hover,
+#capacityView .capacity-route-grid button:focus-visible {
+  border-color: var(--kai-accent) !important;
+  background: var(--kai-brand-soft) !important;
+}
+#vaultView :where(.live-order, .withdraw-request-list > div:not(.production-empty)) {
+  border-color: var(--kai-border) !important;
+}
+#vaultView :where(.live-order b, .live-order-action button, .withdraw-request-list b, .withdraw-request-list strong) {
+  color: var(--kai-ink) !important;
+}
+#vaultView :where(.live-order small, .live-order span, .withdraw-request-form label, .withdraw-request-form .input-unit span, .withdraw-request-note, .withdraw-request-list small) {
+  color: var(--kai-text) !important;
+  font-size: 14px !important;
+  line-height: 22px !important;
+}
+#vaultView .live-order-action button,
+#vaultView .withdraw-history-rule {
+  border-color: var(--kai-border-strong) !important;
+  background: var(--kai-surface) !important;
+  color: var(--kai-accent) !important;
+}
+#vaultView .withdraw-request-form :where(select, input) {
+  border-color: var(--kai-border-strong) !important;
+  background: var(--kai-surface) !important;
+  color: var(--kai-ink) !important;
+}
+#vaultView .withdraw-request-note,
+#vaultView .production-empty {
+  border-color: var(--kai-border-strong) !important;
+  background: var(--kai-brand-soft) !important;
+  color: var(--kai-text) !important;
+}
+#vaultView .production-empty b { color: var(--kai-ink) !important; }
+#vaultView .production-empty span { color: var(--kai-text) !important; font-size: 14px !important; }
+
+.time-tariff.tariff-seven { gap: 8px !important; }
+.time-tariff.tariff-seven span { min-height: 72px !important; padding: 12px !important; border: 0 !important; border-left: 2px solid var(--kai-border-strong) !important; border-radius: 0 !important; background: transparent !important; }
+.time-tariff.tariff-seven b { color: var(--kai-ink) !important; font-size: 16px !important; line-height: 24px !important; }
+.time-tariff.tariff-seven small { color: var(--kai-muted) !important; font-size: 14px !important; line-height: 22px !important; }
+
+.recommend-hero { padding: 32px !important; border: 0 !important; border-left: 3px solid var(--kai-brand-seed) !important; border-radius: 0 !important; background: var(--kai-brand-soft) !important; background-image: none !important; color: var(--kai-text) !important; box-shadow: none !important; }
+.recommend-hero h2 { color: var(--kai-ink) !important; }
+.recommend-hero > p, .core-points small { color: var(--kai-text) !important; }
+.core-points b { color: var(--kai-accent) !important; }
+.invite-code, .share-card, .order-summary { border-color: var(--kai-border) !important; background: var(--kai-info-bg) !important; }
+.share-url { min-height: 44px; border-color: var(--kai-border-strong) !important; border-radius: var(--kai-radius-control) !important; }
+.share-url input { border: 0 !important; background: var(--kai-surface) !important; color: var(--kai-text) !important; font-size: 14px !important; }
+.share-url button { background: var(--kai-brand-seed) !important; color: #fff !important; font-size: 14px !important; }
+.share-channel button, .demo-login { min-height: 44px; border-color: var(--kai-border-strong) !important; border-radius: var(--kai-radius-control) !important; background: transparent !important; color: var(--kai-accent) !important; font-size: 14px !important; }
+
+/* Enterprise, capacity, assessment and governance modules use one quiet component grammar. */
+.enterprise-head p, .gpu-gate-head p, .capacity-ledger-head p, .withdrawal-panel header p, .rmb-standard-head p, .token-pricing-head p, .bilateral-head p, .transaction-result, .bilateral-actions p, .bilateral-delivery-note span, .metering-head p, .consistency-head p, .connector-trust-head p {
+  color: var(--kai-text) !important;
+  font-size: 14px !important;
+  line-height: 22px !important;
+}
+.access-mode-card, .gpu-check, .review-grid > div, .price-layer-grid > div, .token-product-compare, .transaction-mode-tabs button, .payment-verification-list > div, .metering-rule-grid > div, .consistency-grid > div, .connector-grid > div, .governance-grid > div, .capacity-route-grid > * {
+  border: 1px solid var(--kai-border) !important;
+  border-radius: var(--kai-radius-control) !important;
+  background: transparent !important;
+  background-image: none !important;
+  color: var(--kai-text) !important;
+  box-shadow: none !important;
+}
+.supplier-status-flow span, .bilateral-stage-flow span, .fixed-purchase-flow > *, .trade-sequence > * {
+  border-color: var(--kai-border) !important;
+  background: transparent !important;
+  color: var(--kai-text) !important;
+  font-size: 12px !important;
+}
+.token-boundary-alert, .payment-hard-rule, .connector-default-rule, .capacity-warning, .transaction-result {
+  border-color: var(--kai-accent) !important;
+  background: var(--kai-info-bg) !important;
+  color: var(--kai-text) !important;
+}
+.enterprise-error, .auth-error, .capacity-warning, .withdrawal-blockers { color: var(--kai-error) !important; }
+.assessment-scoreline i, .assessment-range i, .capacity-meter i, .demand-meter u { background: var(--kai-accent) !important; }
+.assessment-value strong, .capacity-result strong, .withdrawal-outcome strong, .standard-price-output strong, .token-order-output strong, .bilateral-topup b { color: var(--kai-ink) !important; font-family: var(--kai-display) !important; }
+
+/* Long-form supplier, valuation and governance modules. */
+:where(
+  .enterprise-gate,
+  .gpu-deposit-gate,
+  .assessment-form,
+  .assessment-result,
+  .assessment-process,
+  .capacity-ledger,
+  .price-governance,
+  .token-pricing-boundary,
+  .bilateral-swap-panel,
+  .transaction-mode-detail,
+  .metering-panel,
+  .consistency-panel,
+  .connector-trust-panel,
+  .security-governance,
+  .agent-governance
+) {
+  border-color: var(--kai-border) !important;
+  border-radius: var(--kai-radius-control) !important;
+  background: var(--kai-surface) !important;
+  background-image: none !important;
+  color: var(--kai-text) !important;
+  box-shadow: none !important;
+}
+:where(
+  .enterprise-gate,
+  .gpu-deposit-gate,
+  .assessment-form,
+  .assessment-result,
+  .assessment-process,
+  .capacity-ledger,
+  .price-governance,
+  .token-pricing-boundary,
+  .bilateral-swap-panel,
+  .transaction-mode-detail,
+  .metering-panel,
+  .consistency-panel,
+  .connector-trust-panel,
+  .security-governance,
+  .agent-governance
+) :where(h2, h3, h4, b, strong) { color: var(--kai-ink) !important; }
+:where(
+  .enterprise-gate,
+  .gpu-deposit-gate,
+  .assessment-form,
+  .assessment-result,
+  .assessment-process,
+  .capacity-ledger,
+  .price-governance,
+  .token-pricing-boundary,
+  .bilateral-swap-panel,
+  .transaction-mode-detail,
+  .metering-panel,
+  .consistency-panel,
+  .connector-trust-panel,
+  .security-governance,
+  .agent-governance
+) :where(p, span, small, label, dt, dd, li) { color: var(--kai-text) !important; }
+:where(
+  .enterprise-gate,
+  .gpu-deposit-gate,
+  .assessment-form,
+  .assessment-result,
+  .assessment-process,
+  .capacity-ledger,
+  .price-governance,
+  .token-pricing-boundary,
+  .bilateral-swap-panel,
+  .transaction-mode-detail,
+  .metering-panel,
+  .consistency-panel,
+  .connector-trust-panel,
+  .security-governance,
+  .agent-governance
+) :where(article, .enterprise-status-card, .review-grid > div, .assessment-range > div, .rmb-flow > div, .standard-price-editor, .trade-sequence li, .bilateral-snapshot > div, .payment-server-state, .metering-evidence > div, .event-lab, .agent-calculator, .single-tier-diagram > div) {
+  border-color: var(--kai-border) !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+.enterprise-only, .enterprise-head .eyebrow, .gpu-gate-head .eyebrow, .enterprise-status-top strong, .assessment-result .eyebrow, .capacity-result strong, .withdrawal-outcome strong, .bilateral-topup b { color: var(--kai-accent) !important; }
+.supplier-status-flow span.active, .access-mode-card.active, .transaction-mode-tabs button.active, .bilateral-stage-flow span.active {
+  border-color: var(--kai-accent) !important;
+  background: var(--kai-brand-soft) !important;
+  color: var(--kai-accent) !important;
+  box-shadow: inset 0 -2px var(--kai-accent) !important;
+}
+.assessment-scorebar, .capacity-meter { background: var(--kai-border) !important; }
+.assessment-scorebar i, .capacity-meter i { background: var(--kai-accent) !important; background-image: none !important; box-shadow: none !important; }
+
+/* Swap and supplier assessment: explicit light/dark-safe component states. */
+#swapView :where(
+  .token-boundary-alert,
+  .token-order-fields,
+  .pricing-method,
+  .rmb-standard-panel,
+  .price-governance,
+  .bilateral-swap-panel
+) {
+  border-color: var(--kai-border) !important;
+  background: var(--kai-surface) !important;
+  background-image: none !important;
+  color: var(--kai-text) !important;
+  box-shadow: none !important;
+}
+#swapView .token-boundary-alert,
+#swapView .trade-state,
+#swapView .rmb-equation,
+#swapView .price-standard-formula,
+#swapView .bilateral-delivery-note {
+  border-color: var(--kai-accent) !important;
+  background: var(--kai-brand-soft) !important;
+  background-image: none !important;
+  color: var(--kai-text) !important;
+}
+#swapView .token-boundary-alert b,
+#swapView .trade-state time,
+#swapView .rmb-flow b,
+#swapView .rmb-example b,
+#swapView .price-layer-grid b,
+#swapView .pricing-method-grid b,
+#swapView .bilateral-snapshot b,
+#swapView .bilateral-delivery-note b { color: var(--kai-ink) !important; }
+#swapView .token-boundary-alert span,
+#swapView .trade-state,
+#swapView .swap-detail,
+#swapView .rmb-standard-head p,
+#swapView .rmb-flow small,
+#swapView .rmb-equation,
+#swapView .rmb-example,
+#swapView .price-layer-grid small,
+#swapView .price-standard-formula,
+#swapView .bilateral-snapshot small,
+#swapView .bilateral-actions p,
+#swapView .bilateral-delivery-note span { color: var(--kai-text) !important; }
+#swapView .trade-state i,
+#swapView .rmb-lock,
+#swapView .rmb-flow div:nth-child(2) b,
+#swapView .bilateral-head > span,
+#swapView .bilateral-topup b { color: var(--kai-accent) !important; }
+#swapView .trade-state i::before { background: var(--kai-accent) !important; box-shadow: none !important; }
+#swapView .asset-kind button {
+  border-color: var(--kai-border-strong) !important;
+  background: var(--kai-surface) !important;
+  color: var(--kai-text) !important;
+}
+#swapView .asset-kind button.active {
+  border-color: var(--kai-brand-seed) !important;
+  background: var(--kai-brand-seed) !important;
+  color: #fff !important;
+}
+#swapView .input-unit {
+  border: 1px solid var(--kai-border-strong) !important;
+  background: var(--kai-surface) !important;
+}
+#swapView .input-unit span { color: var(--kai-muted) !important; }
+#swapView :where(.rmb-flow > div, .price-layer-grid > article, .bilateral-snapshot > div) {
+  border-color: var(--kai-border) !important;
+  background: var(--kai-surface) !important;
+  background-image: none !important;
+}
+#swapView .rmb-flow div:not(:last-child)::after { color: var(--kai-accent) !important; }
+#swapView .rmb-lock,
+#swapView .bilateral-head > span {
+  border-color: var(--kai-border-strong) !important;
+  background: var(--kai-brand-soft) !important;
+}
+#swapView .bilateral-verification label { color: var(--kai-text) !important; }
+#swapView .bilateral-stage-flow span.done { border-color: var(--kai-border-strong) !important; color: var(--kai-accent) !important; }
+
+#assessmentView :where(
+  .enterprise-gate,
+  .gpu-deposit-gate,
+  .assessment-form,
+  .assessment-result,
+  .assessment-process,
+  .capacity-ledger,
+  .withdrawal-panel,
+  .connector-trust-panel,
+  .standard-price-editor
+) {
+  border-color: var(--kai-border) !important;
+  background: var(--kai-surface) !important;
+  background-image: none !important;
+  color: var(--kai-text) !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+#assessmentView :where(.enterprise-gate, .gpu-deposit-gate, .assessment-form, .assessment-result) {
+  border-top: 3px solid var(--kai-brand-seed) !important;
+}
+#assessmentView .assess-kind button {
+  border-color: var(--kai-border-strong) !important;
+  background: var(--kai-surface) !important;
+  background-image: none !important;
+  color: var(--kai-text) !important;
+  box-shadow: none !important;
+}
+#assessmentView .assess-kind button span { color: var(--kai-muted) !important; }
+#assessmentView .assess-kind button.active {
+  border-color: var(--kai-brand-seed) !important;
+  background: var(--kai-brand-seed) !important;
+  color: #fff !important;
+  box-shadow: inset 0 -2px var(--kai-brand-pressed) !important;
+}
+#assessmentView .assess-kind button.active span { color: #e8f5ec !important; }
+#assessmentView :where(
+  .token-product-boundary article,
+  .assessment-range > div,
+  .assessment-steps article,
+  .standard-cost-grid label,
+  .supplier-ask-grid label,
+  .standard-price-output > div,
+  .capacity-inputs label,
+  .capacity-result,
+  .withdrawal-result,
+  .connector-check-grid label
+) {
+  border-color: var(--kai-border) !important;
+  background: var(--kai-surface) !important;
+  background-image: none !important;
+  color: var(--kai-text) !important;
+  box-shadow: none !important;
+}
+#assessmentView :where(
+  .assessment-disclosure,
+  .token-product-boundary p,
+  .capacity-formula,
+  .capacity-inputs label:first-child,
+  .capacity-result,
+  .withdrawal-result,
+  .withdrawal-history
+) {
+  border-color: var(--kai-accent) !important;
+  background: var(--kai-brand-soft) !important;
+  background-image: none !important;
+  color: var(--kai-text) !important;
+}
+#assessmentView :where(
+  .assessment-form,
+  .assessment-result,
+  .assessment-process,
+  .capacity-ledger,
+  .withdrawal-panel,
+  .connector-trust-panel
+) :where(h2, h3, h4, b, strong) { color: var(--kai-ink) !important; }
+#assessmentView :where(
+  .assessment-form,
+  .assessment-result,
+  .assessment-process,
+  .capacity-ledger,
+  .withdrawal-panel,
+  .connector-trust-panel
+) :where(p, span, small, label, dt, dd, li) { color: var(--kai-text) !important; }
+#assessmentView .assessment-disclosure b,
+#assessmentView .assessment-scoreline b,
+#assessmentView .assessment-value span,
+#assessmentView .capacity-formula b,
+#assessmentView .capacity-result strong span,
+#assessmentView .capacity-result-state b,
+#assessmentView .capacity-value b,
+#assessmentView .withdrawal-outcome strong,
+#assessmentView .gpu-gate-progress b,
+#assessmentView .enterprise-only,
+#assessmentView .enterprise-status-top strong { color: var(--kai-accent) !important; }
+#assessmentView .assessment-value strong,
+#assessmentView .assessment-range b,
+#assessmentView .assessment-factors b,
+#assessmentView .capacity-result strong,
+#assessmentView .standard-price-output b { color: var(--kai-ink) !important; }
+#assessmentView .assessment-scoreline span,
+#assessmentView .assessment-value small,
+#assessmentView .assessment-range small,
+#assessmentView .assessment-factors span,
+#assessmentView .assessment-result-note,
+#assessmentView .capacity-result > small,
+#assessmentView .capacity-result-state,
+#assessmentView .capacity-value,
+#assessmentView .withdrawal-result > small,
+#assessmentView .withdrawal-checks div,
+#assessmentView .withdrawal-history,
+#assessmentView .review-trigger,
+#assessmentView .gpu-gate-foot p { color: var(--kai-text) !important; }
+#assessmentView .capacity-inputs label,
+#assessmentView .capacity-input-wrap span,
+#assessmentView .withdrawal-grid label,
+#assessmentView .withdrawal-quantity span { color: var(--kai-text) !important; }
+#assessmentView .capacity-input-wrap input { color: var(--kai-ink) !important; background: transparent !important; }
+#assessmentView .capacity-sync {
+  min-height: 44px !important;
+  border-color: var(--kai-border-strong) !important;
+  background: var(--kai-surface) !important;
+  color: var(--kai-accent) !important;
+}
+#assessmentView .capacity-sync:hover { border-color: var(--kai-accent) !important; background: var(--kai-brand-soft) !important; }
+#assessmentView .capacity-meter,
+#assessmentView .assessment-scorebar { background: var(--kai-border) !important; }
+#assessmentView .capacity-meter i,
+#assessmentView .assessment-scorebar i,
+#assessmentView .withdrawal-outcome i { background: var(--kai-accent) !important; background-image: none !important; box-shadow: none !important; }
+#assessmentView .withdrawal-checks { border-color: var(--kai-border) !important; }
+#assessmentView .withdrawal-checks b { color: var(--kai-ink) !important; }
+#assessmentView .supplier-private { color: var(--kai-accent) !important; }
+#assessmentView .connector-trust-head > b,
+#assessmentView .enterprise-only {
+  border-color: var(--kai-border-strong) !important;
+  background: var(--kai-brand-soft) !important;
+}
+#assessmentView .primary,
+#assessmentView .primary span,
+#swapView .primary,
+#swapView .primary span { color: #fff !important; }
+
+.command-dialog {
+  border-color: var(--kai-border-strong) !important;
+  border-radius: var(--kai-radius-overlay) !important;
+  background: var(--kai-elevated) !important;
+  color: var(--kai-text) !important;
+  box-shadow: 0 24px 64px rgba(0,0,0,.22) !important;
+  backdrop-filter: none !important;
+}
+.command-dialog::backdrop { background: rgba(11,20,22,.64) !important; backdrop-filter: none !important; }
+.command-search-wrap, .command-foot { border-color: var(--kai-border) !important; }
+.command-search-wrap input { color: var(--kai-ink) !important; }
+.command-option { border-color: transparent !important; border-radius: var(--kai-radius-control) !important; color: var(--kai-text) !important; background: transparent !important; }
+.command-option > i { border-radius: var(--kai-radius-control) !important; color: var(--kai-accent) !important; background: var(--kai-brand-soft) !important; }
+.command-option b { color: var(--kai-ink) !important; }
+.command-option:hover, .command-option.is-selected { border-color: var(--kai-accent) !important; background: var(--kai-brand-soft) !important; }
+.compare-rail, .formula-details { border-color: var(--kai-border) !important; border-radius: var(--kai-radius-control) !important; background: var(--kai-surface) !important; background-image: none !important; box-shadow: none !important; }
+.compare-option { border-color: var(--kai-border) !important; border-radius: var(--kai-radius-control) !important; background: transparent !important; color: var(--kai-text) !important; transform: none !important; }
+.compare-option::after { display: none !important; }
+.compare-option:hover { border-color: var(--kai-accent) !important; background: var(--kai-brand-soft) !important; transform: none !important; }
+.compare-option b, .compare-head h3 { color: var(--kai-ink) !important; }
+.compare-option strong { color: var(--kai-accent) !important; }
+
+dialog { border: 1px solid var(--kai-border-strong) !important; border-radius: var(--kai-radius-overlay) !important; background: var(--kai-elevated) !important; color: var(--kai-text) !important; box-shadow: 0 24px 64px rgba(0,0,0,.22) !important; }
+dialog::backdrop { background: rgba(11,20,22,.64) !important; backdrop-filter: none !important; }
+.dialog-close { width: 44px; height: 44px; color: var(--kai-muted) !important; }
+.auth-tabs { border-color: var(--kai-border) !important; }
+.auth-tabs button { color: var(--kai-muted) !important; font-size: 14px !important; }
+.auth-tabs button.active { border-color: var(--kai-accent) !important; color: var(--kai-accent) !important; }
+.pay { min-height: 64px; border-color: var(--kai-border) !important; border-radius: var(--kai-radius-control) !important; background: var(--kai-surface) !important; color: var(--kai-text) !important; }
+.pay.active { border-color: var(--kai-accent) !important; background: var(--kai-brand-soft) !important; }
+.security-note { color: var(--kai-muted) !important; font-size: 12px !important; line-height: 20px !important; }
+.account-menu { border-color: var(--kai-border) !important; border-radius: var(--kai-radius-overlay) !important; background: var(--kai-elevated) !important; box-shadow: 0 12px 32px rgba(0,0,0,.16) !important; }
+.account-menu button { min-height: 44px; color: var(--kai-text) !important; font-size: 14px !important; }
+.account-menu button:hover { background: var(--kai-info-bg) !important; }
+.toast { max-width: min(420px, calc(100vw - 32px)); border-radius: var(--kai-radius-control) !important; background: var(--kai-elevated) !important; color: var(--kai-ink) !important; box-shadow: 0 12px 32px rgba(0,0,0,.18) !important; }
+.toast b { color: var(--kai-ink) !important; font-size: 14px !important; }
+.toast span { color: var(--kai-text) !important; }
+
+.mobile-trade-bar {
+  animation: none !important;
+  isolation: isolate;
+  contain: paint;
+  overflow: hidden;
+  border-color: var(--kai-border-strong) !important;
+  border-radius: var(--kai-radius-overlay) !important;
+  background: var(--kai-elevated) !important;
+  box-shadow: 0 16px 40px rgba(0,0,0,.2) !important;
+  backdrop-filter: none !important;
+}
+.mobile-trade-bar > * { position: relative; z-index: 1; }
+.mobile-trade-value small { color: var(--kai-muted) !important; }
+.mobile-trade-value strong { color: var(--kai-ink) !important; font-family: var(--kai-display) !important; }
+.mobile-trade-share { overflow: hidden; border: 1px solid var(--kai-accent) !important; border-radius: var(--kai-radius-control) !important; background: transparent !important; color: var(--kai-accent) !important; }
+.mobile-trade-buy { overflow: hidden; border: 1px solid var(--kai-brand-seed) !important; border-radius: var(--kai-radius-control) !important; background: var(--kai-brand-seed) !important; background-image: none !important; color: #fff !important; box-shadow: none !important; }
+
+/* The digital type ladder does not permit visible metadata below Label / 12. */
+:where(.view, .sidebar, .topbar, dialog, .mobile-more-menu)
+  :where(div, span, small, label, button, a, li, em, time, dt, dd, th, td, kbd, i, b) {
+  font-size: max(12px, 1em) !important;
+}
+
+.nav-more-toggle, .mobile-more-menu { display: none; }
+
+@media (max-width: 1180px) {
+  .shell { grid-template-columns: 208px minmax(0, 1fr) !important; }
+  .sidebar { width: 208px !important; padding-inline: 20px !important; }
+  .view { padding-inline: 32px !important; }
+  .system-strip { display: none !important; }
+  .offer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .hero { grid-template-columns: 1fr !important; }
+  .market-brief { max-width: 720px; }
+}
+
+@media (max-width: 860px) {
+  .shell { display: block !important; }
+  main { grid-column: auto !important; padding-bottom: 80px !important; }
+  .sidebar {
+    position: fixed !important;
+    inset: auto 0 0 !important;
+    width: 100% !important;
+    height: 72px !important;
+    padding: 8px 12px max(8px, env(safe-area-inset-bottom)) !important;
+    border: 0 !important;
+    border-top: 1px solid var(--kai-border) !important;
+    z-index: 20 !important;
+  }
+  .brand, .side-status, .side-foot { display: none !important; }
+  .nav { display: grid !important; grid-template-columns: repeat(5, 1fr) !important; gap: 4px !important; margin: 0 !important; width: 100% !important; }
+  .nav-item { display: none !important; min-width: 0; min-height: 52px; padding: 6px 4px !important; justify-content: center !important; text-align: center !important; font-size: 12px !important; line-height: 16px !important; }
+  .nav-item[data-view="market"], .nav-item[data-view="capacity"], .nav-item[data-view="vault"], .nav-item[data-view="quote"], .nav-more-toggle { display: flex !important; }
+  .nav-item.active::before { inset: auto 8px 0 !important; width: auto; height: 2px; }
+  .nav-item b { display: none !important; }
+  .nav-more-toggle { align-items: center; }
+  .mobile-more-menu {
+    position: fixed;
+    z-index: 100;
+    inset: auto 12px calc(80px + env(safe-area-inset-bottom)) auto;
+    display: grid;
+    width: min(280px, calc(100vw - 24px));
+    padding: 8px;
+    border: 1px solid var(--kai-border-strong);
+    border-radius: var(--kai-radius-overlay);
+    background: var(--kai-elevated);
+    box-shadow: 0 16px 40px rgba(0,0,0,.2);
+  }
+  .mobile-more-menu[hidden] { display: none; }
+  body.mobile-more-open .mobile-trade-bar { visibility: hidden !important; pointer-events: none !important; }
+  .mobile-more-item { min-height: 48px; padding: 12px; border: 0; border-radius: var(--kai-radius-control); background: transparent; color: var(--kai-text); text-align: left; font-size: 16px; }
+  .mobile-more-item:hover, .mobile-more-item:focus-visible { background: var(--kai-brand-soft); color: var(--kai-accent); }
+  .topbar { padding: 12px 24px !important; }
+  .production-state, .density-toggle, .command-trigger, #noticeBtn { display: none !important; }
+  .account div, .account i { display: none !important; }
+  .quote-layout, .sell-layout { grid-template-columns: 1fr !important; }
+  .result-card { position: static !important; }
+  .swap-layout { grid-template-columns: 1fr !important; gap: 12px; }
+  .swap-arrow { margin: -4px auto !important; transform: rotate(90deg); }
+  .quote-breakdown { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 599px) {
+  .topbar { gap: 12px; padding-inline: 16px !important; }
+  .breadcrumb { display: none; }
+  .top-actions { width: 100%; justify-content: flex-end; }
+  .mode-picker { margin-right: auto; }
+  .mode-picker span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .mode-picker select { min-width: 124px; }
+  .view { padding: 32px 16px 96px !important; }
+  .hero { gap: 32px !important; padding: 32px 0 48px !important; }
+  .hero h1 { font-size: 40px !important; line-height: 48px !important; }
+  .page-title { align-items: flex-start !important; flex-direction: column; margin-bottom: 32px !important; }
+  .page-title h1 { font-size: 32px !important; line-height: 40px !important; }
+  .hero p, .page-title p { font-size: 18px !important; line-height: 30px !important; }
+  .hero-actions { align-items: stretch; flex-direction: column; }
+  .hero-actions button { width: 100%; }
+  .offer-grid, .stat-grid, .form-grid, .radio-row { grid-template-columns: 1fr !important; }
+  .filters { align-items: stretch; flex-wrap: wrap; overflow: visible !important; }
+  .filters .search { display: flex !important; width: 100%; margin-left: 0; }
+  .filters .search input { width: 100%; }
+  .asset-row { grid-template-columns: 1fr !important; }
+  .asset-row > div { display: block !important; }
+  .market-chart-panel { margin-inline: 0 !important; padding: 16px !important; }
+  .market-chart-head, .market-chart-controls, .market-chart-foot { align-items: stretch !important; flex-direction: column !important; }
+  .market-chart-controls label, .market-chart-controls select { width: 100%; }
+  .market-intervals { width: 100%; margin-left: 0 !important; overflow-x: auto; }
+  .market-intervals button { flex: 1 0 56px; }
+  .market-chart-stats { grid-template-columns: 1fr 1fr !important; }
+  .market-chart-stats div:first-child { grid-column: 1 / -1; }
+  .market-chart-stage { overflow-x: auto !important; }
+  #marketCandleChart { width: 760px !important; max-width: none !important; }
+  .time-tariff.tariff-seven { grid-template-columns: 1fr !important; }
+  .core-points, .recommend-stats { grid-template-columns: 1fr !important; }
+  .dialog-step, .auth-wrap { padding: 32px 24px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .reveal-pending { transform: none !important; transition: opacity var(--kai-motion-standard) ease-out !important; }
+  .system-strip i { animation: none !important; }
+  .model-pill:hover, .model-pill.active, .offer:nth-child(n), .offer:nth-child(n):hover { transform: none !important; }
+}

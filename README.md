@@ -1,69 +1,53 @@
-# KAI CloudPay 移动端
+# CloudPay 算力交易平台
 
-这是 `cloudpay.kai.com` 的独立原生移动端项目，位于桌面独立目录，不引用也不修改原网站工程。
+CloudPay 是面向企业采购方与企业供应商的算力撮合平台，覆盖 GPU、模型 Token、机柜/柜月等资源的展示、估值、存取、置换、订单、支付回调、计量、验收和结算流程。
 
-产品结构采用移动端任务语言，而不是缩小网页版：
+本仓库同时包含：
 
-- 首页：算力雷达、市场脉搏、场景任务和交付时间线
-- 市场：按训练、推理、地区和时段意图查看已核验资源档案；价格通过双审后生成卡时价
-- 发布：需要算力、闲置变现、供应商入驻三条任务路径
-- 消息：履约、市场和系统状态时间线
-- 我的：账户会话、卡时闭环状态、隐私与数据用途
+- `server.py`：CloudPay 服务端、容量账本、交易接口及 KAI Identity 登录回调；
+- `outputs/`：响应式网页端，可用于电脑和手机浏览器；
+- `mobile/`：基于 Capacitor 的 Android/iOS App 工程；
+- `app-store-release/`：应用商店文案、协议、隐私与审核材料；
+- `work/`：KAI Identity 客户端登记、部署和验证工具；
+- `kai-production.env`：生产环境变量模板，不包含真实密钥。
 
-当前版本采用同一账号下的双视角导航：使用算力为 `首页 / 市场 / 订单 / 消息 / 我的`，提供算力为 `工作台 / 资源 / 上架 / 消息 / 我的`。两者一键切换且共用账号、主体、资源、订单和卡时账户。
+## KAI Identity 统一登录
 
-## 数据边界
+网页与 App 均使用 KAI Identity。网页采用服务端 Authorization Code 流程；App 通过系统浏览器登录，并回跳到 `cloudpay://auth/callback`。客户端密钥和身份访问令牌只保存在服务端，不写入网页或安装包。
 
-应用从 `https://cloudpay.kai.com` 读取公开健康状态、已验真资源目录、账户认证状态和发布准备状态。资源人民币直付与供应方自定人民币价格不属于产品模型，也不存在兼容入口。
+需要在 KAI Identity 为 CloudPay 客户端登记以下回调：
+
+- `https://cloudpay.kai.com/api/auth/kai/callback`
+- `https://cloudpay.kai.com/api/auth/kai/mobile/callback`
+
+生产环境必须在受限配置中填写 `KAI_IDENTITY_CLIENT_ID` 和 `KAI_IDENTITY_CLIENT_SECRET`，不得把真实密钥提交到仓库。
 
 ## 本地运行
 
-```bash
+1. 安装 Python 3.11 或更高版本。
+2. 安装依赖：`python -m pip install -r requirements.txt`。
+3. 根据 `kai-production.env` 在本机设置必要环境变量；本地调试可使用独立数据库路径。
+4. 运行：`python server.py`。
+
+默认监听地址和端口由 `KAI_HOST`、`KAI_PORT` 控制。生产环境使用 systemd 与 Nginx，示例配置见 `kai-transaction.service` 和 `nginx-kai.conf`。
+
+## App 工程
+
+进入 `mobile/` 后运行：
+
+```text
 npm install
-npm run typecheck
-npm run contract:verify
-npm run android
+npm run preflight
+npm run sync
 ```
 
-## Android 构建
+Android 使用 Android Studio/Gradle 生成签名 AAB；iOS 必须在 macOS 与 Xcode 中使用企业开发者证书归档。版本、原生回跳和发布注意事项见 `mobile/README.md`。
 
-```bash
-npm run prebuild:android
-npm run release:key
-CLOUDPAY_EAS_PROJECT_ID='<已绑定 Expo 项目的 UUID>' CLOUDPAY_PUBLISHED_ANDROID_VERSION_CODE='<各商店最高值>' npm run build:apk:direct
-CLOUDPAY_EAS_PROJECT_ID='<已绑定 Expo 项目的 UUID>' CLOUDPAY_PUBLISHED_ANDROID_VERSION_CODE='<各商店最高值>' npm run build:aab:play
-CLOUDPAY_EAS_PROJECT_ID='<同一 UUID>' CLOUDPAY_PUBLISHED_ANDROID_VERSION_CODE='<同一最高值>' npm run release:preflight
-npm run release:smoke:android
-```
+## 安全约束
 
-如果同包名曾在任一商店或测试轨道上传过，构建和预检都必须传入已用最高版本码；候选 `versionCode` 不高于该值时自动失败。若确认这个包名从未上传过，改为显式传入 `CLOUDPAY_ANDROID_PACKAGE_NEVER_PUBLISHED=1`。两项必须且只能选择一项，不能靠缺省值猜测。
+- 不提交数据库、运行日志、用户数据、支付密钥、短信密钥或身份客户端密钥；
+- 不提交 Android/iOS 签名证书、keystore、描述文件或云主账号凭据；
+- 支付成功状态只接受银行或持牌支付机构的服务端签名通知；
+- 连接器上报、支付回调和所有写接口必须执行签名、幂等和审计校验。
 
-`release:key` 首次执行会在 `~/.cloudpay-release` 创建 CloudPay 专用上传密钥。私钥和口令始终位于项目外，不进入源码仓库；仓库只保留可公开的上传证书。两个发布命令都强制使用该密钥；`CLOUDPAY_EAS_PROJECT_ID` 不仅要是 UUID，还必须与当前已登录 EAS 项目查询结果一致。缺少正式签名、EAS 登录/绑定或版本历史证明时，构建会在产物生成前失败。本地 E2E 预览不要求这些正式身份。
-
-`build:apk:direct` 生成国内直装版，保留支付宝/微信卡时充值、卡时购买和完整提供方上架闭环。`build:aab:play` 生成 Google Play 管理版：不包含支付宝/微信 SDK、充值入口或新增购买动作，但完整保留资源录入、审计补件、上架、接单、交付、售后和结算。
-
-`contract:verify` 会逐项比对手机版实际请求与后端已注册路由。当前 Android 正式构建和后端部署打包都会先运行这道门禁；请求方式或路径有任何一处不同，均停止生成发布产物。
-
-`release:preflight` 会校验 AAB 结构、包名、版本、目标 API、权限、签名证书、AAB 内实际嵌入的 Expo 项目 ID、正式 API、隐私政策、服务条款和独立账户删除页面，并把机器可读报告写入 `artifacts/release/android-release-report.json`。任何一项失败都禁止发布。
-
-每次 Android 构建都会把当前主前端的源码指纹写入包内。预检会重新计算 App 入口、全部页面、Android 原生分发代码、插件、配置与锁定依赖的指纹；旧 APK/AAB 即使包名、签名和版本均合法，只要不是当前代码生成，也会以 `frontend_source_current` 失败，禁止误提交废弃前端。
-
-`release:smoke:android` 会在唯一连接的安卓测试设备上执行正式 APK 冷启动，逐个打开五个主入口，保存截图和 UI 结构，并检查主前端指纹、渠道、接口环境、候选包与设备安装文件哈希、崩溃、Metro 依赖及致命日志。需要安装包时使用 `npm run release:smoke:android -- --install`；未通过候选包校验时安装动作不会发生。查看当前本地上架版统一使用 `npm run preview:android:provider`。
-
-## Android 产物规则
-
-- `artifacts/release/KAI-CloudPay-1.0.0-1-local-e2e.apk`：当前本地完整链路验收包，不得提交商店
-- `artifacts/release/KAI-CloudPay-1.0.0-1-direct-cn.apk`：配置完整后重新构建的国内直装正式候选包
-- `artifacts/release/KAI-CloudPay-1.0.0-1-google-play.aab`：配置完整后重新构建的 Google Play 正式候选包
-- 同名 `.sha256` 文件：上传前的完整性校验值
-- `artifacts/release/android-release-report.json`：发布门禁报告
-- `docs/cloudpay-upload-certificate.pem`：提交 Google Play 或校验签名所需的公开证书
-
-旧 debug、preview、国内直装和 Google Play 候选物已移出项目，避免同包名旧前端被误装。绑定真实 Expo 项目并补齐生产配置后必须重新构建；仍以最新预检报告中的 `ready` 字段为唯一发布依据。
-
-## 商店标识
-
-- Android：`com.kaicloud.marketplace`
-- iOS：`com.kaicloud.marketplace`
-- URL Scheme：`kaicloudpay://`
-- 当前版本：`1.0.0 (1)`
+线上地址：[https://cloudpay.kai.com](https://cloudpay.kai.com)

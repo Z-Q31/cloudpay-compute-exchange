@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>KAI Cloud Store Assets</title>
+  <style>
+    :root {
+      --green: #166534;
+      --green-deep: #14532d;
+      --green-dark: #0f3d25;
+      --green-soft: #eaf6ee;
+      --canvas: #fbfdfb;
+      --surface: #ffffff;
+      --ink: #15231a;
+      --text: #3f5447;
+      --muted: #65766b;
+      --line: #d5e4d9;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; min-height: 100%; }
+    body {
+      overflow: hidden;
+      font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--canvas);
+    }
+
+    .artboard {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      isolation: isolate;
+      background:
+        radial-gradient(circle at 88% 8%, rgba(57, 155, 92, .16), transparent 29%),
+        radial-gradient(circle at 0% 63%, rgba(22, 101, 52, .10), transparent 32%),
+        linear-gradient(145deg, #ffffff 0%, #f4faf6 54%, #e9f5ed 100%);
+    }
+
+    .artboard::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      opacity: .58;
+      background-image:
+        linear-gradient(rgba(22, 101, 52, .055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(22, 101, 52, .055) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: linear-gradient(to bottom, #000 0%, transparent 82%);
+    }
+
+    .ledger {
+      position: absolute;
+      z-index: -1;
+      right: 2.5%;
+      top: 4%;
+      width: 39%;
+      height: 24%;
+      opacity: .42;
+      background:
+        repeating-linear-gradient(90deg, transparent 0 31px, rgba(22,101,52,.36) 31px 33px),
+        linear-gradient(180deg, transparent 5%, rgba(22,101,52,.10) 54%, transparent 55%);
+      clip-path: polygon(0 61%, 9% 61%, 9% 40%, 17% 40%, 17% 70%, 26% 70%, 26% 28%, 35% 28%, 35% 55%, 45% 55%, 45% 13%, 54% 13%, 54% 48%, 64% 48%, 64% 22%, 74% 22%, 74% 65%, 84% 65%, 84% 34%, 93% 34%, 93% 52%, 100% 52%, 100% 100%, 0 100%);
+    }
+
+    .topline {
+      position: absolute;
+      left: 7.4%;
+      right: 7.4%;
+      top: 4.8%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 25px;
+      letter-spacing: .16em;
+      font-weight: 750;
+      color: var(--green);
+    }
+
+    .index {
+      display: inline-grid;
+      place-items: center;
+      width: 70px;
+      height: 42px;
+      border: 2px solid rgba(22,101,52,.32);
+      border-radius: 999px;
+      font-size: 21px;
+      letter-spacing: .08em;
+      background: rgba(255,255,255,.68);
+    }
+
+    .copy {
+      position: absolute;
+      left: 7.4%;
+      right: 7.4%;
+      top: 10.3%;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 1000px;
+      font-size: 94px;
+      line-height: 1.09;
+      letter-spacing: -.055em;
+      font-weight: 850;
+      color: var(--ink);
+    }
+
+    .accent { color: var(--green); }
+
+    .subtitle {
+      margin: 28px 0 0;
+      max-width: 1050px;
+      font-size: 37px;
+      line-height: 1.48;
+      font-weight: 550;
+      color: var(--text);
+    }
+
+    .chips { display: flex; gap: 14px; margin-top: 31px; flex-wrap: wrap; }
+    .chip {
+      padding: 13px 24px;
+      border: 2px solid rgba(22,101,52,.20);
+      border-radius: 999px;
+      background: rgba(255,255,255,.8);
+      color: var(--green-deep);
+      font-size: 25px;
+      line-height: 1;
+      font-weight: 760;
+      box-shadow: 0 8px 24px rgba(20,83,45,.06);
+    }
+
+    .screen-card {
+      position: absolute;
+      left: 7.4%;
+      right: 7.4%;
+      top: 29.6%;
+      bottom: -3.5%;
+      border: 3px solid rgba(22,101,52,.20);
+      border-radius: 46px 46px 0 0;
+      overflow: hidden;
+      background: var(--surface);
+      box-shadow: 0 52px 130px rgba(16, 68, 37, .20), 0 14px 42px rgba(16, 68, 37, .10);
+    }
+
+    .screen-bar {
+      height: 88px;
+      padding: 0 30px;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      border-bottom: 2px solid var(--line);
+      background: rgba(250,253,251,.96);
+    }
+
+    .dot { width: 15px; height: 15px; border-radius: 50%; background: #b9d4c2; }
+    .dot:nth-child(2) { background: #77b78c; }
+    .dot:nth-child(3) { background: var(--green); }
+    .secure {
+      margin-left: 20px;
+      padding: 10px 21px;
+      border-radius: 999px;
+      background: var(--green-soft);
+      color: var(--green-deep);
+      font-size: 21px;
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+
+    .screen-card img {
+      display: block;
+      width: 100%;
+      height: calc(100% - 88px);
+      object-fit: cover;
+      object-position: top center;
+      background: var(--surface);
+    }
+
+    .wide .screen-card { top: 31%; bottom: 14.5%; }
+    .wide .screen-card img { object-fit: contain; padding: 24px; }
+    .metric-row {
+      display: none;
+      position: absolute;
+      left: 7.4%;
+      right: 7.4%;
+      bottom: 3.8%;
+      gap: 18px;
+    }
+    .wide .metric-row { display: flex; }
+    .metric {
+      flex: 1;
+      min-height: 180px;
+      padding: 28px;
+      border-radius: 26px;
+      background: rgba(255,255,255,.88);
+      border: 2px solid var(--line);
+    }
+    .metric b { display: block; font-size: 34px; color: var(--green); }
+    .metric span { display: block; margin-top: 12px; font-size: 23px; line-height: 1.35; color: var(--text); }
+
+    .android h1 { font-size: 73px; }
+    .android .subtitle { margin-top: 20px; font-size: 29px; }
+    .android .copy { top: 9.3%; }
+    .android .topline { top: 4%; font-size: 21px; }
+    .android .index { width: 60px; height: 36px; font-size: 18px; }
+    .android .chips { margin-top: 22px; }
+    .android .chip { font-size: 20px; padding: 11px 19px; }
+    .android .screen-card { top: 28.2%; border-radius: 37px 37px 0 0; }
+    .android .screen-bar { height: 68px; }
+    .android .screen-card img { height: calc(100% - 68px); }
+    .android .wide .screen-card { top: 31%; }
+    .android .metric { min-height: 130px; padding: 20px; }
+    .android .metric b { font-size: 27px; }
+    .android .metric span { font-size: 18px; }
+
+    .landscape .artboard::before { background-size: 88px 88px; }
+    .landscape .topline { left: 5.1%; right: 5.1%; top: 6.2%; font-size: 31px; }
+    .landscape .copy { left: 5.1%; right: 51%; top: 15.2%; }
+    .landscape h1 { font-size: 105px; max-width: 1150px; }
+    .landscape .subtitle { font-size: 38px; max-width: 1050px; }
+    .landscape .chips { margin-top: 37px; }
+    .landscape .chip { font-size: 27px; padding: 15px 26px; }
+    .landscape .screen-card {
+      left: 48%; right: 3.8%; top: 13.5%; bottom: 8.5%;
+      border-radius: 48px;
+    }
+    .landscape .screen-card img { object-fit: cover; object-position: top left; }
+    .landscape .screen-bar { height: 96px; }
+    .landscape .screen-card img { height: calc(100% - 96px); }
+    .landscape .ledger { width: 48%; height: 38%; top: 58%; left: 1%; right: auto; opacity: .30; }
+    .landscape .proof {
+      position: absolute;
+      left: 5.1%; bottom: 9%;
+      width: 38%;
+      padding-top: 25px;
+      border-top: 3px solid rgba(22,101,52,.24);
+      display: flex;
+      gap: 54px;
+    }
+    .proof div { font-size: 25px; color: var(--text); }
+    .proof b { display: block; margin-bottom: 8px; font-size: 38px; color: var(--green); }
+
+    .feature .artboard { background: linear-gradient(112deg, #0f3d25 0%, #166534 56%, #23834a 100%); color: #fff; }
+    .feature .artboard::before { opacity: .28; background-size: 42px 42px; mask-image: none; }
+    .feature .ledger { opacity: .46; right: -2%; top: 2%; width: 48%; height: 54%; filter: brightness(2.2); }
+    .feature .brand-copy { position: absolute; left: 6.2%; top: 14%; width: 53%; }
+    .feature .kicker { font-size: 22px; letter-spacing: .17em; font-weight: 750; color: #c7ead1; }
+    .feature h1 { margin-top: 20px; color: #fff; font-size: 68px; line-height: 1.05; letter-spacing: -.045em; }
+    .feature .subtitle { margin-top: 20px; color: #dff2e5; font-size: 28px; line-height: 1.35; }
+    .feature .chips { margin-top: 25px; }
+    .feature .chip { color: #fff; border-color: rgba(255,255,255,.22); background: rgba(255,255,255,.09); box-shadow: none; font-size: 18px; }
+    .feature .mini-ui {
+      position: absolute; right: 4.2%; top: 15%; width: 40%; height: 72%;
+      border-radius: 28px; overflow: hidden; border: 2px solid rgba(255,255,255,.22);
+      background: #fff; box-shadow: 0 24px 75px rgba(0,0,0,.26); transform: rotate(-1.6deg);
+    }
+    .feature .mini-ui img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+
+    .launch .artboard { background: linear-gradient(160deg, #fbfdfb 0%, #edf7f0 100%); }
+    .launch .launch-core {
+      position: absolute; inset: 0; display: grid; place-content: center; text-align: center;
+      transform: translateY(-2%);
+    }
+    .launch .launch-scale {
+      position: relative;
+      width: 720px; height: 150px; margin: 0 auto 68px;
+      border-bottom: 3px solid rgba(22,101,52,.28);
+      background: repeating-linear-gradient(90deg, transparent 0 31px, rgba(22,101,52,.34) 31px 34px);
+      mask-image: linear-gradient(90deg, transparent 0%, #000 13%, #000 87%, transparent 100%);
+    }
+    .launch .launch-scale::after {
+      content: "COMPUTE CAPACITY LEDGER";
+      position: absolute; left: 0; right: 0; bottom: -44px;
+      color: var(--green); font-size: 17px; letter-spacing: .19em; font-weight: 750;
+    }
+    .launch h1 { font-size: 94px; color: var(--green-deep); letter-spacing: -.05em; }
+    .launch .subtitle { margin: 25px auto 0; font-size: 32px; max-width: 850px; }
+    .launch .launch-status { margin-top: 64px; color: var(--green); font-size: 22px; letter-spacing: .14em; font-weight: 750; }
+    .launch.landscape .launch-core { transform: none; }
+    .launch.landscape .launch-scale { width: 980px; height: 170px; }
+    .launch.landscape h1 { font-size: 116px; }
+    .launch.landscape .subtitle { font-size: 38px; }
+
+    .contact { overflow: auto; background: #eef5f0; }
+    .contact-sheet { width: 1800px; min-height: 1920px; padding: 70px; background: #eef5f0; }
+    .contact-head { display: flex; justify-content: space-between; align-items: end; margin-bottom: 42px; }
+    .contact-head h1 { font-size: 58px; color: var(--green-deep); }
+    .contact-head p { font-size: 24px; color: var(--text); }
+    .contact-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 22px; }
+    .contact-grid figure { margin: 0; }
+    .contact-grid img { display: block; width: 100%; border-radius: 18px; box-shadow: 0 13px 32px rgba(20,83,45,.15); }
+    .contact-grid figcaption { margin-top: 12px; font-size: 19px; color: var(--text); text-align: center; }
+    .contact-wide { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 45px; }
+    .contact-wide figure { margin: 0; }
+    .contact-wide img { width: 100%; border-radius: 20px; box-shadow: 0 13px 32px rgba(20,83,45,.15); }
+    .contact-feature { margin-top: 45px; display: grid; grid-template-columns: 1.35fr .65fr; gap: 28px; align-items: start; }
+    .contact-feature img { width: 100%; border-radius: 20px; box-shadow: 0 13px 32px rgba(20,83,45,.15); }
+    .contact-note { padding: 36px; border-radius: 22px; background: #fff; border: 2px solid var(--line); }
+    .contact-note b { display: block; color: var(--green); font-size: 29px; }
+    .contact-note p { font-size: 21px; line-height: 1.55; color: var(--text); }
+  </style>
+</head>
+<body>
+  <main id="root"></main>
+  <script>
+    const stories = {
+      market: {
+        n: "01", title: "按产品、地区和时段\n找到<span class='accent'>算力</span>",
+        sub: "统一查看 GPU、模型 Token 与柜月的可售条件。",
+        chips: ["GPU", "TOKEN", "柜月"], image: "../../outputs/kai-design-system-mobile.png"
+      },
+      h100: {
+        n: "02", title: "H100 从配置到\n<span class='accent'>验收入账</span>",
+        sub: "预留、支付、交付与计量状态一条链路追踪。",
+        chips: ["9 张 H100", "卡时计费", "交付可追溯"], image: "../../outputs/h100-online-mobile.png"
+      },
+      supplier: {
+        n: "03", title: "从资源验真到\n<span class='accent'>挂牌成交</span>",
+        sub: "认证、容量账本、报价与订单集中在供应商工作台。",
+        chips: ["企业认证", "容量账本", "交付结算"], image: "../../outputs/supplier-workbench-mobile.png"
+      },
+      swap: {
+        n: "04", title: "三类算力按人民币\n<span class='accent'>价值置换</span>",
+        sub: "原始单位、价格来源、价值快照与建议补差均可复核。",
+        chips: ["GPU ↔ TOKEN", "TOKEN ↔ 柜月", "GPU ↔ 柜月"], image: "../../outputs/swap-light-full.png"
+      },
+      kline: {
+        n: "05", title: "报价按地区与周期\n<span class='accent'>精细展开</span>",
+        sub: "从 5 分钟到 1 个月，查看同一标准产品的行情变化。",
+        chips: ["地区", "厂商", "1月周期"], image: "../../outputs/market-chart-month.png", wide: true
+      },
+      assessment: {
+        n: "06", title: "先评估，再确定\n<span class='accent'>可交易额度</span>",
+        sub: "综合规格、区域、时间、SLA 与交付条件形成评估。",
+        chips: ["规格评估", "持续验真", "风险调整"], image: "../../outputs/assessment-light-full.png"
+      }
+    };
+
+    const params = new URLSearchParams(location.search);
+    const type = params.get("type") || "portrait";
+    const storyKey = params.get("story") || "market";
+    const story = stories[storyKey];
+    const root = document.querySelector("#root");
+
+    const chipHtml = items => `<div class="chips">${items.map(x => `<span class="chip">${x}</span>`).join("")}</div>`;
+    const screenHtml = (image, wide = false) => `
+      <section class="screen-card">
+        <div class="screen-bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="secure">企业算力服务 · 安全访问</span></div>
+        <img src="${image}" alt="KAI Cloud 真实产品界面" />
+      </section>
+      ${wide ? `<div class="metric-row"><div class="metric"><b>多周期</b><span>5 分钟、15 分钟、日线与月线</span></div><div class="metric"><b>同口径</b><span>产品、地区、厂商与时段一致</span></div><div class="metric"><b>可追溯</b><span>市场参考价与成交数据分离</span></div></div>` : ""}`;
+
+    if (type === "portrait") {
+      document.body.classList.add(params.get("platform") === "android" ? "android" : "ios");
+      root.innerHTML = `<article class="artboard ${story.wide ? "wide" : ""}">
+        <div class="ledger"></div>
+        <header class="topline"><span>KAI CLOUD / ENTERPRISE COMPUTE</span><span class="index">${story.n}</span></header>
+        <section class="copy"><h1>${story.title.replace("\n", "<br>")}</h1><p class="subtitle">${story.sub}</p>${chipHtml(story.chips)}</section>
+        ${screenHtml(story.image, story.wide)}
+      </article>`;
+    } else if (type === "tablet") {
+      document.body.classList.add("landscape");
+      root.innerHTML = `<article class="artboard">
+        <div class="ledger"></div>
+        <header class="topline"><span>KAI CLOUD / ENTERPRISE COMPUTE</span><span class="index">${story.n}</span></header>
+        <section class="copy"><h1>${story.title.replace("\n", "<br>")}</h1><p class="subtitle">${story.sub}</p>${chipHtml(story.chips)}</section>
+        ${screenHtml(params.get("image") || story.image)}
+        <div class="proof"><div><b>企业级</b>角色与权限分离</div><div><b>全链路</b>报价到结算追踪</div></div>
+      </article>`;
+    } else if (type === "feature") {
+      document.body.classList.add("feature");
+      root.innerHTML = `<article class="artboard"><div class="ledger"></div>
+        <section class="brand-copy"><div class="kicker">KAI CLOUD / ENTERPRISE COMPUTE</div><h1>企业算力交易与<br>容量管理</h1><p class="subtitle">发现、评估、采购和管理 GPU、模型 Token 与柜月资源</p>${chipHtml(["GPU", "TOKEN", "柜月", "容量账本"])}</section>
+        <div class="mini-ui"><img src="../../outputs/market-chart-month.png" alt="KAI Cloud 报价界面" /></div>
+      </article>`;
+    } else if (type === "launch") {
+      document.body.classList.add("launch");
+      if (params.get("orientation") === "landscape") document.body.classList.add("landscape");
+      root.innerHTML = `<article class="artboard"><div class="ledger"></div><section class="launch-core">
+        <div class="launch-scale" aria-hidden="true"></div>
+        <h1>KAI Cloud</h1><p class="subtitle">企业算力交易与容量管理</p><div class="launch-status">GPU · TOKEN · 柜月</div>
+      </section></article>`;
+    } else if (type === "contact") {
+      document.body.classList.add("contact");
+      const phoneNames = ["market", "h100", "supplier", "swap", "kline", "assessment"];
+      root.innerHTML = `<section class="contact-sheet">
+        <div class="contact-head"><div><h1>KAI Cloud 上架视觉素材</h1><p>绿色浅色体系 · 算力账本刻度 · 真实界面</p></div><p>设计预览 / 2026-08-11</p></div>
+        <div class="contact-grid">${phoneNames.map((n,i)=>`<figure><img src="../assets/ios-${String(i+1).padStart(2,"0")}-${n}-1290x2796.png"><figcaption>${stories[n].n} · ${["算力市场","H100 采购","供应商工作台","人民币置换","报价 K 线","供应商评估"][i]}</figcaption></figure>`).join("")}</div>
+        <div class="contact-wide"><figure><img src="../assets/tablet-01-operations-2732x2048.png"></figure><figure><img src="../assets/tablet-02-kline-2732x2048.png"></figure></div>
+        <div class="contact-feature"><img src="../assets/feature-graphic-1024x500.png"><div class="contact-note"><b>启动图与商店图</b><p>手机和平板启动图已输出；商店截图同时包含 iOS 与 Android 两套比例。Logo 与商店图标按用户要求未设计，待提供正式 Logo 后补充。</p></div></div>
+      </section>`;
+    }
+  </script>
+</body>
+</html>

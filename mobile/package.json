@@ -1,0 +1,29 @@
+{
+  "name": "kai-cloud-mobile",
+  "version": "1.1.0",
+  "private": true,
+  "description": "KAI Cloud iOS and Android container",
+  "scripts": {
+    "preflight": "node scripts/release-preflight.mjs",
+    "sync": "npm run preflight && npx cap sync",
+    "open:android": "npm run sync && npx cap open android",
+    "open:ios": "npm run sync && npx cap open ios",
+    "assets": "npx capacitor-assets generate",
+    "build:android": "npm run sync && cd android && gradlew bundleRelease",
+    "doctor": "npx cap doctor"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/browser": "^8.0.0",
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/ios": "^8.4.2",
+    "@capacitor/share": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.4.2"
+  }
+}

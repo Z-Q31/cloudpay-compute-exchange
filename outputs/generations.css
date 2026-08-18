@@ -1,0 +1,383 @@
+/* Iterations 5–9: navigation, comparison, density, transparency and mobile trade. */
+
+/* Generation 5 — global command center */
+.command-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid rgba(88, 166, 255, .22);
+  border-radius: 10px;
+  color: #b9d8ff;
+  background: rgba(13, 42, 82, .56);
+  font: 600 12px/1 "Noto Sans SC", sans-serif;
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease, transform .2s ease;
+}
+
+.command-trigger:hover {
+  border-color: rgba(88, 166, 255, .56);
+  background: rgba(23, 74, 136, .7);
+  transform: translateY(-1px);
+}
+
+.command-trigger kbd {
+  padding: 3px 5px;
+  border: 1px solid rgba(140, 194, 255, .25);
+  border-radius: 5px;
+  color: #7fbaff;
+  background: rgba(2, 16, 38, .48);
+  font: 500 10px/1 "DM Mono", monospace;
+}
+
+.command-dialog {
+  width: min(560px, calc(100vw - 30px));
+  margin: 14vh auto 0;
+  padding: 0;
+  border: 1px solid rgba(83, 164, 255, .4);
+  border-radius: 18px;
+  color: #e9f4ff;
+  background: rgba(5, 20, 46, .96);
+  box-shadow: 0 30px 100px rgba(0, 8, 26, .72), 0 0 50px rgba(25, 112, 255, .16);
+  backdrop-filter: blur(26px);
+  overflow: hidden;
+}
+
+.command-dialog::backdrop { background: rgba(0, 7, 22, .72); backdrop-filter: blur(5px); }
+
+.command-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(109, 177, 255, .14);
+}
+
+.command-search-wrap span { color: #64adff; font-size: 20px; }
+.command-search-wrap input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: #f1f8ff;
+  background: transparent;
+  font: 600 16px/1.5 "Noto Sans SC", sans-serif;
+}
+.command-search-wrap input::placeholder { color: #6f8eaf; }
+
+.command-list { display: grid; gap: 6px; padding: 10px; }
+.command-option {
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  color: #bdd4ec;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.command-option > i {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  color: #68b1ff;
+  background: rgba(39, 120, 221, .14);
+  font-style: normal;
+}
+.command-option b { display: block; color: #eaf5ff; font-size: 14px; }
+.command-option small { color: #6f91b6; font-size: 11px; }
+.command-option > span { color: #56789d; font: 11px "DM Mono", monospace; }
+.command-option:hover,
+.command-option.is-selected {
+  border-color: rgba(92, 168, 255, .28);
+  background: linear-gradient(90deg, rgba(42, 126, 232, .2), rgba(19, 62, 116, .1));
+}
+.command-empty { padding: 28px; color: #7f9bbb; text-align: center; }
+.command-foot {
+  display: flex;
+  gap: 15px;
+  padding: 10px 18px;
+  border-top: 1px solid rgba(109, 177, 255, .12);
+  color: #6f8dac;
+  font-size: 11px;
+}
+
+@media (max-width: 760px) {
+  .command-trigger > span { display: none; }
+  .command-trigger kbd { display: none; }
+  .command-trigger::before { content: "⌘"; font-size: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .command-trigger { transition: none; }
+}
+
+/* Generation 6 — GPU alternatives comparison */
+.compare-rail {
+  margin: 20px 0 24px;
+  padding: 20px;
+  border: 1px solid rgba(77, 153, 244, .18);
+  border-radius: 16px;
+  background:
+    linear-gradient(125deg, rgba(19, 63, 119, .22), rgba(4, 20, 46, .42)),
+    rgba(5, 18, 41, .58);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .025);
+}
+
+.compare-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+.compare-head h3 { margin: 4px 0 0; color: #eaf5ff; font-size: 18px; }
+.compare-head > span { color: #6789ad; font-size: 11px; }
+.compare-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.compare-option {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 14px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(88, 164, 255, .16);
+  border-radius: 12px;
+  color: #a9c4df;
+  background: rgba(8, 31, 67, .58);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color .2s ease, transform .2s ease, background .2s ease;
+}
+.compare-option::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #2f91ff, transparent);
+  opacity: 0;
+}
+.compare-option:hover {
+  border-color: rgba(88, 170, 255, .48);
+  background: rgba(15, 55, 108, .68);
+  transform: translateY(-2px);
+}
+.compare-option:hover::after { opacity: 1; }
+.compare-option b { color: #f0f8ff; font-size: 15px; }
+.compare-option strong { color: #68b4ff; font: 600 18px/1.2 "DM Mono", monospace; }
+.compare-option small { color: #6689ad; font-size: 11px; }
+.compare-option em { color: #8fb3d9; font-size: 11px; font-style: normal; text-align: right; }
+
+@media (max-width: 800px) {
+  .compare-grid { grid-template-columns: 1fr; }
+  .compare-head { align-items: start; flex-direction: column; gap: 5px; }
+}
+
+/* Generation 7 — comfortable / compact density */
+.density-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid rgba(88, 166, 255, .18);
+  border-radius: 10px;
+  color: #8eb8e4;
+  background: rgba(8, 31, 66, .52);
+  font-size: 12px;
+  cursor: pointer;
+}
+.density-toggle i { color: #5caaff; font-style: normal; }
+.density-toggle:hover { color: #dceeff; border-color: rgba(88, 166, 255, .42); }
+
+body.compact-density main { --content-pad: 24px; }
+body.compact-density .view { padding-top: 24px; }
+body.compact-density .hero { gap: 24px; padding-block: 30px 25px; }
+body.compact-density .hero h1 { margin-block: 8px 12px; }
+body.compact-density .page-title { margin-bottom: 20px; }
+body.compact-density .panel,
+body.compact-density .quote-form,
+body.compact-density .result-card,
+body.compact-density .sell-result,
+body.compact-density .quote-breakdown,
+body.compact-density .compare-rail { padding: 16px; }
+body.compact-density .offer-grid { gap: 10px; }
+body.compact-density .offer-card { padding: 15px; }
+body.compact-density .form-grid { gap: 13px; }
+body.compact-density .quote-layout,
+body.compact-density .sell-layout { gap: 14px; }
+body.compact-density .model-cloud { gap: 7px; }
+body.compact-density .model-pill { min-height: 34px; padding: 7px 10px; }
+body.compact-density .result-factors { margin-block: 14px; }
+body.compact-density .stat { min-height: 112px; padding: 16px; }
+
+@media (max-width: 760px) {
+  .density-toggle span { display: none; }
+  body.compact-density main { --content-pad: 16px; }
+}
+
+/* Generation 8 — transparent pricing formula */
+.formula-details {
+  margin: 14px 0;
+  border: 1px solid rgba(84, 161, 249, .2);
+  border-radius: 12px;
+  background: rgba(7, 29, 63, .62);
+  overflow: hidden;
+}
+.formula-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 14px;
+  color: #bcd8f5;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+}
+.formula-details summary::-webkit-details-marker { display: none; }
+.formula-details summary::after {
+  content: '+';
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: #67b2ff;
+  background: rgba(48, 132, 231, .14);
+  font: 500 17px/1 "DM Mono", monospace;
+  transition: transform .2s ease;
+}
+.formula-details[open] summary::after { transform: rotate(45deg); }
+.formula-body { padding: 0 14px 14px; border-top: 1px solid rgba(87, 158, 236, .12); }
+.formula-equation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin: 13px 0;
+}
+.formula-equation span {
+  padding: 6px 8px;
+  border: 1px solid rgba(87, 162, 246, .18);
+  border-radius: 7px;
+  color: #a9cbea;
+  background: rgba(25, 77, 137, .18);
+  font-size: 11px;
+}
+.formula-equation i { color: #4778aa; font-style: normal; }
+.formula-live {
+  padding: 10px;
+  border-left: 2px solid #318eff;
+  border-radius: 2px 8px 8px 2px;
+  color: #789abc;
+  background: rgba(23, 77, 142, .13);
+  font: 11px/1.8 "DM Mono", "Noto Sans SC", monospace;
+  word-break: break-word;
+}
+.formula-note { margin: 9px 0 0; color: #607f9f; font-size: 10px; line-height: 1.6; }
+
+/* Generation 9 — mobile transaction dock and final visual convergence */
+.mobile-trade-bar { display: none; }
+
+:focus-visible {
+  outline: 2px solid #55a8ff;
+  outline-offset: 3px;
+}
+
+.view.active { isolation: isolate; }
+.view.active::before {
+  content: '';
+  position: fixed;
+  z-index: -1;
+  top: 68px;
+  right: -15vw;
+  width: 46vw;
+  height: 46vw;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(28, 112, 238, .055), transparent 68%);
+  pointer-events: none;
+}
+
+.result-card,
+.sell-result,
+.quote-breakdown { box-shadow: 0 22px 70px rgba(0, 10, 30, .26), inset 0 1px rgba(255, 255, 255, .025); }
+
+@media (max-width: 680px) {
+  body.quote-active { padding-bottom: 146px; }
+  body.quote-active .mobile-trade-bar {
+    position: fixed;
+    z-index: 80;
+    right: 10px;
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    left: 10px;
+    display: grid;
+    grid-template-columns: minmax(100px, 1fr) auto auto;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 9px 9px 13px;
+    border: 1px solid rgba(84, 166, 255, .36);
+    border-radius: 15px;
+    background: rgba(5, 22, 49, .93);
+    box-shadow: 0 18px 50px rgba(0, 7, 23, .58), 0 0 30px rgba(31, 119, 255, .12);
+    backdrop-filter: blur(20px);
+    animation: tradeDockIn .32s ease both;
+  }
+  .mobile-trade-value { min-width: 0; }
+  .mobile-trade-value small { display: block; color: #6f94b9; font-size: 9px; letter-spacing: .08em; }
+  .mobile-trade-value strong {
+    display: block;
+    margin-top: 2px;
+    color: #f0f8ff;
+    font: 650 clamp(18px, 5.8vw, 24px)/1.1 "DM Mono", monospace;
+    white-space: nowrap;
+  }
+  .mobile-trade-bar button {
+    min-height: 42px;
+    padding: 0 13px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 650;
+  }
+  .mobile-trade-share {
+    border: 1px solid rgba(89, 164, 246, .24);
+    color: #a7caed;
+    background: rgba(18, 58, 108, .58);
+  }
+  .mobile-trade-buy {
+    border: 1px solid rgba(78, 161, 255, .55);
+    color: #fff;
+    background: linear-gradient(135deg, #126bd5, #248cff);
+    box-shadow: 0 8px 22px rgba(18, 110, 222, .28);
+  }
+  .command-dialog { margin-top: 8vh; }
+  .command-list { max-height: 58vh; overflow: auto; }
+  .compare-rail { padding: 15px; }
+  .formula-equation { gap: 5px; }
+  .formula-equation span { font-size: 10px; }
+}
+
+@keyframes tradeDockIn {
+  from { opacity: 0; transform: translateY(16px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-trade-bar { animation: none !important; }
+  .formula-details summary::after { transition: none; }
+}
+
+@media (forced-colors: active) {
+  .command-dialog,
+  .compare-rail,
+  .formula-details,
+  .mobile-trade-bar { border: 1px solid CanvasText; }
+}

@@ -1,0 +1,25 @@
+/* Editorial pass: keep the trading interface specific, restrained and evidence-led. */
+.eyebrow { text-transform: none; letter-spacing: .06em; font-family: var(--sans); font-weight: 600; }
+.hero { align-items: center; padding-top: 48px; }
+.hero h1 { max-width: 760px; font-size: clamp(42px, 4.4vw, 64px); letter-spacing: -.045em; }
+.hero h1 em { color: #8dd7f7; }
+.hero p { max-width: 670px; }
+.market-brief { align-self: stretch; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #1d425d; background: #071522; padding: 26px; }
+.market-brief-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 18px; border-bottom: 1px solid #17364d; }
+.market-brief-head span { color: #7893a8; font-size: 11px; }.market-brief-head b { color: #b9dcef; font-size: 11px; }
+.market-brief dl { margin: 12px 0; }.market-brief dl div { display: flex; justify-content: space-between; align-items: baseline; padding: 13px 0; border-bottom: 1px solid #102c40; }
+.market-brief dt { color: #718ba0; font-size: 10px; }.market-brief dd { margin: 0; color: #e0eff7; font: 20px var(--mono); }
+.market-brief p { margin: 12px 0 0; color: #668196; font-size: 10px; line-height: 1.65; }
+.offer,.panel,.quote-form,.recommend-card { box-shadow: none !important; }
+.offer:hover { transform: none; border-color: rgba(88,200,255,.38); }
+.recommend-stats { display: none !important; }
+.primary,.secondary,.nav-item,.chip,.text-btn { transition-duration: .14s; }
+@media (max-width: 900px) { .market-brief { min-height: 280px; } }
+@media (max-width: 680px) {
+  .hero { padding-top: 18px; }.hero h1 { font-size: 38px; line-height: 1.14; }
+  .market-brief { min-height: 250px; padding: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *,*::before,*::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}

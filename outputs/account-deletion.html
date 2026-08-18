@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>KAI Cloud 账户注销</title>
+  <link rel="stylesheet" href="/legal.css">
+</head>
+<body>
+  <main class="legal-shell">
+    <header class="legal-head">
+      <a href="/">← 返回 KAI Cloud</a>
+      <h1>申请注销 KAI Cloud 账户</h1>
+      <p>已安装或已卸载 App 的用户都可以通过本网页提交注销申请。</p>
+    </header>
+    <article class="legal-card">
+      <h2>处理规则</h2>
+      <ul>
+        <li>未完成的订单、交付、退款、争议或供应商义务需要先处理完毕。</li>
+        <li>可立即进入排期的账户预计在 7 日后由运营复核并匿名化。</li>
+        <li>依法或依合同必须保留的订单、支付、计量、发票、结算和审计记录不会因注销被篡改。</li>
+      </ul>
+      <form class="legal-form" id="deletionWebForm">
+        <label>当前账户密码<input id="webDeletionPassword" type="password" autocomplete="current-password"></label>
+        <label>注销原因<textarea id="webDeletionReason" rows="4">用户主动申请停止使用 KAI Cloud</textarea></label>
+        <div class="legal-actions"><button class="primary" type="submit">提交注销申请</button><a href="/">先登录账户</a></div>
+        <p class="legal-state" id="webDeletionState" role="status"></p>
+      </form>
+      <h2>联系支持</h2>
+      <p>如无法登录，可通过支持邮箱 <a data-support-email></a> 联系运营人员进行身份核验和注销协助。</p>
+    </article>
+  </main>
+  <script src="/legal.js"></script>
+  <script src="/account-deletion.js"></script>
+</body>
+</html>

@@ -1,0 +1,235 @@
+/* KAI Cloud video-reference palette.
+   Source frame: pale mint -> ice blue -> mist lavender, with KAI blue accents. */
+:root,
+html[data-color-mode="light"],
+html[data-color-mode="dark"] {
+  color-scheme: light !important;
+
+  --kai-video-mint: #e6f9f5;
+  --kai-video-ice: #ebf3fb;
+  --kai-video-lavender: #f2f1fb;
+  --kai-video-blue: #0e6cf1;
+
+  --kai-brand-seed: #0e6cf1;
+  --kai-brand-hover: #0a5ed7;
+  --kai-brand-pressed: #084eaf;
+  --kai-brand-soft: #e3efff;
+  --kai-canvas: #ebf3fb;
+  --kai-surface: #f8fbff;
+  --kai-elevated: #ffffff;
+  --kai-ink: #111111;
+  --kai-text: #374052;
+  --kai-muted: #596273;
+  --kai-border: #d6e3f2;
+  --kai-border-strong: #b8cbe1;
+  --kai-accent: #0e6cf1;
+  --kai-accent-hover: #0a5ed7;
+  --kai-accent-pressed: #084eaf;
+  --kai-success: #008a5a;
+  --kai-success-bg: #e5f7f0;
+  --kai-warning: #8a5a00;
+  --kai-warning-bg: #fff5da;
+  --kai-error: #d9364e;
+  --kai-error-bg: #fff0f3;
+  --kai-info: #0e6cf1;
+  --kai-info-bg: #e8f2ff;
+
+  --paper: var(--kai-canvas);
+  --white: var(--kai-surface);
+  --ink: var(--kai-ink);
+  --muted: var(--kai-muted);
+  --line: var(--kai-border);
+  --green: var(--kai-video-blue);
+  --lime: var(--kai-video-blue);
+  --lime2: var(--kai-brand-soft);
+  --orange: var(--kai-warning);
+  --shadow: 0 12px 34px rgba(14, 108, 241, .09);
+}
+
+html { background: #ebf3fb; }
+body,
+html[data-color-mode="dark"] body {
+  background: linear-gradient(180deg, #e6f9f5 0%, #ebf3fb 52%, #f2f1fb 100%) fixed !important;
+  color: var(--kai-text) !important;
+}
+
+.sidebar,
+html[data-color-mode="dark"] .sidebar {
+  background: color-mix(in srgb, #e6f9f5 88%, white) !important;
+  border-color: var(--kai-border) !important;
+  box-shadow: 10px 0 32px rgba(14, 108, 241, .055) !important;
+}
+.topbar,
+html[data-color-mode="dark"] .topbar {
+  background: color-mix(in srgb, #e6f9f5 82%, transparent) !important;
+  border-color: var(--kai-border) !important;
+  box-shadow: 0 8px 28px rgba(14, 108, 241, .045) !important;
+  backdrop-filter: blur(18px) saturate(120%) !important;
+}
+.brand,
+.brand-mark { color: #0e6cf1 !important; }
+.brand-mark,
+.mobile-app-brand > span,
+.identity-auth-mark {
+  background: linear-gradient(145deg, #4491ee 0%, #0e6cf1 68%, #0a5ed7 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 9px 24px rgba(14, 108, 241, .2) !important;
+}
+.brand-mark { border-radius: 10px !important; }
+
+.nav-item:hover { background: rgba(235, 243, 251, .9) !important; }
+.nav-item.active {
+  background: #e3efff !important;
+  color: #0e6cf1 !important;
+}
+.nav-item.active::before { background: #0e6cf1 !important; }
+
+.view { background: transparent !important; }
+.market-brief,
+.offer,
+.offer-card,
+.panel,
+.quote-form,
+.result-card,
+.sell-result,
+.swap-card,
+.pricing-method,
+.recommend-card,
+.enterprise-panel,
+.enterprise-status-card,
+.assessment-panel,
+.capacity-ledger-panel,
+.withdrawal-panel,
+.withdraw-request-panel,
+.rmb-standard-panel,
+.bilateral-swap-panel,
+.live-orders-panel,
+.metering-panel,
+.consistency-panel,
+.connector-trust-panel,
+.market-overview-stats > div,
+.market-terminal-filters,
+.market-watchlist,
+.market-detail,
+.identity-auth-block,
+.identity-mobile-page,
+.kai-identity-auth,
+.command-dialog,
+dialog {
+  border-color: var(--kai-border) !important;
+  background: color-mix(in srgb, var(--kai-surface) 88%, transparent) !important;
+  box-shadow: 0 14px 36px rgba(14, 108, 241, .075) !important;
+}
+
+.primary,
+.offer-price button,
+.mobile-trade-buy,
+.identity-login {
+  border-color: #0e6cf1 !important;
+  background: #0e6cf1 !important;
+  color: #fff !important;
+  box-shadow: 0 8px 20px rgba(14, 108, 241, .17) !important;
+}
+.primary:hover,
+.offer-price button:hover,
+.mobile-trade-buy:hover,
+.identity-login:hover {
+  border-color: #0a5ed7 !important;
+  background: #0a5ed7 !important;
+}
+.primary:active,
+.offer-price button:active,
+.mobile-trade-buy:active,
+.identity-login:active { background: #084eaf !important; }
+.primary span,
+.identity-login span { color: #fff !important; }
+.secondary,
+.mobile-trade-share { border-color: #0e6cf1 !important; color: #0e6cf1 !important; }
+.secondary:hover,
+.mobile-trade-share:hover { background: #e3efff !important; }
+
+:where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline-color: #0e6cf1 !important;
+  box-shadow: 0 0 0 4px rgba(14, 108, 241, .14) !important;
+}
+
+/* The market header repeats the reference video's three-color wash. */
+.market-index-hero,
+html[data-color-mode="dark"] .market-index-hero {
+  border: 1px solid rgba(14, 108, 241, .12) !important;
+  background: linear-gradient(150deg, #e6f9f5 0%, #ebf3fb 54%, #f2f1fb 100%) !important;
+  color: #111111 !important;
+  box-shadow: 0 18px 42px rgba(14, 108, 241, .1) !important;
+}
+.market-index-hero .eyebrow { color: #0e6cf1 !important; }
+.market-index-hero h2 { color: #111111 !important; }
+.market-index-hero p { color: #596273 !important; }
+.market-index-status { border-color: rgba(14, 108, 241, .18) !important; }
+.market-index-status small,
+.market-index-status span { color: #596273 !important; }
+.market-index-status .market-source { color: #0e6cf1 !important; }
+
+/* K-line terminal: the same structure, translated to the video's light palette. */
+.binance-chart-shell {
+  border-color: #d6e3f2 !important;
+  background: #ebf3fb !important;
+  color: #111111 !important;
+}
+.binance-chart-toolbar,
+.binance-chart-footer { border-color: #d6e3f2 !important; }
+.binance-chart-toolbar .market-chart-modes,
+.binance-chart-shell .market-chart-stage,
+.binance-chart-shell #marketCandleChart { background: #ebf3fb !important; }
+.binance-time-tools > button,
+.binance-chart-toolbar .market-intervals button,
+.binance-chart-toolbar .market-chart-modes button,
+.binance-caret,
+.binance-chart-readout,
+.binance-chart-footer { color: #596273 !important; }
+.binance-time-tools > button:hover,
+.binance-chart-toolbar .market-intervals button:hover,
+.binance-chart-toolbar .market-chart-modes button:hover { color: #0e6cf1 !important; }
+.binance-time-tools > button.active,
+.binance-chart-toolbar .market-intervals button.active,
+.binance-chart-toolbar .market-chart-modes button.active { color: #111111 !important; }
+.binance-toolbar-separator { background: #d6e3f2 !important; }
+.binance-chart-readout b { color: #111111; }
+.binance-chart-shell .market-grid-line,
+.binance-chart-shell .market-divider { stroke: #d6e3f2 !important; }
+.binance-chart-shell .market-axis-label,
+.binance-chart-shell .market-time-label,
+.market-volume-label { fill: #596273 !important; }
+.market-chart-watermark { fill: rgba(14, 108, 241, .055) !important; }
+.market-extreme-label { fill: #111111 !important; }
+.market-crosshair { stroke: #7d8da2 !important; }
+.binance-chart-shell .market-chart-tooltip {
+  border-color: #b8cbe1 !important;
+  background: #ffffff !important;
+  color: #111111 !important;
+  box-shadow: 0 12px 30px rgba(14, 108, 241, .16) !important;
+}
+.binance-chart-shell .market-chart-loading {
+  background: rgba(235, 243, 251, .94) !important;
+  color: #596273 !important;
+}
+
+html[data-runtime="native"] .kai-mobile-identity {
+  background:
+    radial-gradient(circle at 100% 0, rgba(14, 108, 241, .12), transparent 38%),
+    linear-gradient(180deg, #e6f9f5 0%, #ebf3fb 52%, #f2f1fb 100%) !important;
+}
+html[data-runtime="native"] .kai-mobile-identity::backdrop { background: #ebf3fb !important; }
+
+@media (max-width: 760px) {
+  body { background-attachment: scroll !important; }
+  .topbar { background: rgba(230, 249, 245, .92) !important; }
+  .sidebar {
+    background: rgba(248, 251, 255, .94) !important;
+    box-shadow: 0 -10px 30px rgba(14, 108, 241, .09) !important;
+  }
+  .mobile-more-menu { background: #f8fbff !important; box-shadow: 0 16px 40px rgba(14, 108, 241, .14) !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}

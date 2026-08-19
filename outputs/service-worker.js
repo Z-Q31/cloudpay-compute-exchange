@@ -1,5 +1,5 @@
-const CACHE = 'kai-shell-v2';
-const SHELL = ['/offline.html', '/favicon.svg', '/app-closure.css'];
+const CACHE = 'kai-shell-v3-video-palette';
+const SHELL = ['/offline.html', '/favicon.svg', '/app-closure.css', '/kai-video-theme.css'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));

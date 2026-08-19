@@ -46,7 +46,10 @@
   }
 
   function rebuildMore() {
-    var secondaryViews = ['swap', 'sell', 'supplier', 'recommend', 'assessment'];
+    var primaryViews = ['market', 'capacity', 'vault', 'quote'];
+    var secondaryViews = Array.from(nav.querySelectorAll('[data-view]'))
+      .map(function (item) { return item.dataset.view; })
+      .filter(function (view, index, items) { return view && !primaryViews.includes(view) && items.indexOf(view) === index; });
     moreMenu.replaceChildren();
     secondaryViews.forEach(function (view) {
       var original = nav.querySelector('[data-view="' + view + '"]');
@@ -55,7 +58,9 @@
       item.type = 'button';
       item.className = 'mobile-more-item';
       item.dataset.targetView = view;
-      item.textContent = original.textContent.trim().replace(/^[⇄↗◎◉▦]+\s*/, '');
+      var label = original.cloneNode(true);
+      label.querySelectorAll('span,b').forEach(function (node) { node.remove(); });
+      item.textContent = label.textContent.trim();
       item.addEventListener('click', function () {
         original.click();
         closeMore();
@@ -78,10 +83,13 @@
 
   var navObserver = new MutationObserver(function () {
     rebuildMore();
-    var active = nav.querySelector('.nav-item.active')?.dataset.view;
-    moreToggle.classList.toggle('active', ['swap', 'sell', 'supplier', 'recommend', 'assessment'].includes(active));
   });
-  navObserver.observe(nav, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+  navObserver.observe(nav, { childList: true, subtree: true });
+
+  nav.addEventListener('click', function (event) {
+    var view = event.target.closest('[data-view]')?.dataset.view;
+    if (view) moreToggle.classList.toggle('active', !['market', 'capacity', 'vault', 'quote'].includes(view));
+  });
 
   document.addEventListener('click', function (event) {
     if (!event.target.closest('.nav-more-toggle,.mobile-more-menu')) closeMore();

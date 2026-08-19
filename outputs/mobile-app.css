@@ -1,0 +1,606 @@
+/* CloudPay mobile information architecture.
+   This is intentionally the final stylesheet: desktop keeps the existing design,
+   while handheld layouts use a task-first app shell instead of stacked desktop panels. */
+
+.mobile-app-brand { display: none; }
+
+@media (max-width: 760px) {
+  :root {
+    --mobile-gutter: 16px;
+    --mobile-nav-height: 68px;
+    --mobile-card-radius: 14px;
+  }
+
+  html { scroll-padding-top: 64px; }
+  body {
+    min-width: 0;
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
+    background: var(--kai-canvas);
+    -webkit-text-size-adjust: 100%;
+  }
+  button, a, input, select, textarea { touch-action: manipulation; }
+  button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+
+  /* App header */
+  .shell, main { width: 100%; min-width: 0; }
+  main { margin: 0 !important; }
+  .topbar {
+    position: sticky !important;
+    z-index: 80;
+    top: 0;
+    display: flex !important;
+    min-height: 60px !important;
+    padding: max(8px, env(safe-area-inset-top)) var(--mobile-gutter) 8px !important;
+    border-bottom: 1px solid var(--kai-border) !important;
+    background: color-mix(in srgb, var(--kai-canvas) 94%, transparent) !important;
+    backdrop-filter: blur(14px) !important;
+  }
+  .mobile-app-brand {
+    display: grid;
+    grid-template-columns: 36px auto;
+    grid-template-rows: 18px 14px;
+    align-items: center;
+    column-gap: 9px;
+    min-width: 0;
+    color: var(--kai-ink);
+    text-decoration: none;
+  }
+  .mobile-app-brand > span {
+    grid-row: 1 / 3;
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--kai-accent);
+    color: #fff;
+    font: 800 20px/1 var(--kai-display);
+  }
+  .mobile-app-brand b { align-self: end; font-size: 15px; line-height: 18px; }
+  .mobile-app-brand small { align-self: start; color: var(--kai-muted); font-size: 10px; line-height: 14px; }
+  .breadcrumb, .system-strip, #noticeBtn, .production-state { display: none !important; }
+  .top-actions { width: auto !important; margin-left: auto; }
+  .mode-picker { display: block !important; margin: 0 !important; }
+  .mode-picker > span {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+  }
+  .mode-picker select {
+    width: 88px !important;
+    min-width: 88px !important;
+    min-height: 40px !important;
+    padding: 6px 8px !important;
+    border-radius: 10px !important;
+    font-size: 12px !important;
+  }
+  .account {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    padding: 4px !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  .account > span {
+    display: grid !important;
+    width: 36px !important;
+    height: 36px !important;
+    place-items: center;
+    border: 1px solid var(--kai-border-strong) !important;
+    border-radius: 50% !important;
+    background: var(--kai-surface) !important;
+    color: var(--kai-accent) !important;
+    font-size: 12px !important;
+  }
+  .account div, .account i { display: none !important; }
+
+  /* Persistent bottom task navigation */
+  .sidebar {
+    position: fixed !important;
+    z-index: 90 !important;
+    inset: auto 0 0 0 !important;
+    display: block !important;
+    width: 100% !important;
+    height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom)) !important;
+    padding: 0 8px env(safe-area-inset-bottom) !important;
+    border: 0 !important;
+    border-top: 1px solid var(--kai-border) !important;
+    background: color-mix(in srgb, var(--kai-surface) 96%, transparent) !important;
+    box-shadow: 0 -8px 24px rgba(16, 52, 33, .08) !important;
+    backdrop-filter: blur(18px) !important;
+  }
+  .sidebar > .brand, .side-status, .side-foot { display: none !important; }
+  .nav {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 2px !important;
+    height: var(--mobile-nav-height);
+    margin: 0 !important;
+  }
+  .nav::before { display: none !important; }
+  .nav-item {
+    display: none !important;
+    min-width: 0 !important;
+    min-height: 56px !important;
+    padding: 6px 2px 5px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-direction: column !important;
+    gap: 3px !important;
+    border-radius: 10px !important;
+    color: var(--kai-muted) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    line-height: 14px !important;
+    white-space: nowrap;
+  }
+  .nav-item[data-view="market"],
+  .nav-item[data-view="capacity"],
+  .nav-item[data-view="vault"],
+  .nav-item[data-view="quote"],
+  .nav-more-toggle { display: flex !important; }
+  .nav-item > span:first-child {
+    display: block !important;
+    height: 20px;
+    color: currentColor !important;
+    font: 700 18px/20px var(--kai-text-font) !important;
+  }
+  .nav-item.active { background: var(--kai-brand-soft) !important; color: var(--kai-accent) !important; }
+  .nav-item.active::before { display: none !important; }
+  .nav-more-toggle::before {
+    display: block !important;
+    width: auto !important;
+    height: 20px !important;
+    background: none !important;
+    color: currentColor;
+    content: "•••" !important;
+    font: 800 16px/14px var(--kai-text-font);
+    letter-spacing: 2px;
+  }
+  .nav-item b { display: none !important; }
+  .mobile-more-menu {
+    z-index: 89 !important;
+    inset: auto 12px calc(var(--mobile-nav-height) + 10px + env(safe-area-inset-bottom)) 12px !important;
+    width: auto !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px;
+    padding: 12px !important;
+    border-radius: 18px !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, .22) !important;
+  }
+  .mobile-more-item {
+    min-height: 52px !important;
+    padding: 12px 14px !important;
+    border: 1px solid var(--kai-border) !important;
+    border-radius: 12px !important;
+    font-size: 14px !important;
+    font-weight: 700;
+  }
+
+  /* Shared mobile page rhythm */
+  .view { padding: 20px var(--mobile-gutter) 24px !important; }
+  .page-title {
+    gap: 14px !important;
+    margin: 0 0 18px !important;
+  }
+  .page-title h1 { margin: 4px 0 5px !important; font-size: 28px !important; line-height: 1.2 !important; }
+  .page-title p { margin: 0 !important; font-size: 14px !important; line-height: 1.65 !important; }
+  .eyebrow { font-size: 11px !important; line-height: 16px !important; }
+  .panel, .stat, .quote-form, .result-card, .swap-card, .quote-breakdown, .sell-result,
+  .app-account-card, .app-deletion-panel, .app-release-panel, .live-swap-panel {
+    border-radius: var(--mobile-card-radius) !important;
+    box-shadow: 0 6px 18px rgba(16, 52, 33, .05) !important;
+  }
+  .panel, .quote-form, .result-card, .swap-card, .quote-breakdown, .sell-result { padding: 16px !important; }
+  .stat-grid, .form-grid, .radio-row, .quote-layout, .sell-layout, .swap-layout { gap: 12px !important; }
+  input, select, textarea, .input-unit { min-height: 48px !important; font-size: 16px !important; }
+  .primary, .secondary, .ghost, .text-btn { min-height: 44px; }
+  dialog { max-height: calc(100dvh - 16px) !important; }
+
+  /* Market becomes a task-first dashboard. */
+  #marketView.active { display: flex !important; flex-direction: column; gap: 0; }
+  #marketChartPanel { order: 1; }
+  #h100ProductHub { order: 2; }
+  #marketView > .hero { order: 3; }
+  #marketView > .section-head { order: 4; }
+  #marketView > .filters { order: 5; }
+  #marketView > #offerGrid { order: 6; }
+
+  #marketView > .hero {
+    display: grid !important;
+    gap: 12px !important;
+    margin: 0 0 22px !important;
+    padding: 18px !important;
+    border: 1px solid var(--kai-border) !important;
+    border-radius: var(--mobile-card-radius) !important;
+    background: var(--kai-surface) !important;
+  }
+  #marketView > .hero h1 {
+    margin: 6px 0 8px !important;
+    font-size: 24px !important;
+    line-height: 1.3 !important;
+  }
+  #marketView > .hero h1 br { display: none; }
+  #marketView > .hero p { margin: 0 !important; font-size: 14px !important; line-height: 1.65 !important; }
+  #marketView > .hero .hero-actions { display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px !important; margin-top: 13px; }
+  #marketView > .hero .hero-actions button { width: 100%; min-height: 46px; }
+  #marketView > .hero .market-brief {
+    margin: 0 !important;
+    padding: 14px !important;
+    border-radius: 11px !important;
+    box-shadow: none !important;
+  }
+  #marketView > .hero .market-brief dl { grid-template-columns: repeat(3, 1fr) !important; }
+  #marketView > .hero .market-brief dd { font-size: 18px !important; }
+
+  .market-chart-panel {
+    display: flex;
+    flex-direction: column;
+    margin: 0 0 22px !important;
+    scroll-margin-top: 72px;
+  }
+  .market-index-hero {
+    display: flex !important;
+    min-height: 0 !important;
+    padding: 17px 18px !important;
+    border-radius: var(--mobile-card-radius) !important;
+    box-shadow: none !important;
+  }
+  .market-index-hero .eyebrow { font-size: 9px !important; letter-spacing: .1em !important; }
+  .market-index-hero h2 { margin: 5px 0 0 !important; font-size: 23px !important; line-height: 1.25 !important; }
+  .market-index-hero p { margin-top: 6px !important; font-size: 12px !important; line-height: 1.5 !important; }
+  .market-index-status { display: none !important; }
+
+  .market-overview-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    margin: 9px 0 !important;
+  }
+  .market-overview-stats > div {
+    min-height: 64px !important;
+    padding: 10px 8px 8px !important;
+    border-radius: 10px !important;
+    box-shadow: none !important;
+  }
+  .market-overview-stats > div::before { width: 3px !important; }
+  .market-overview-stats small { overflow: hidden; font-size: 9px !important; text-overflow: ellipsis; white-space: nowrap; }
+  .market-overview-stats strong { margin: 4px 0 0 !important; font-size: 18px !important; }
+  .market-overview-stats span { display: none !important; }
+
+  .market-terminal-filters {
+    margin: 0 0 9px !important;
+    padding: 0 12px 12px !important;
+    border-radius: var(--mobile-card-radius) !important;
+  }
+  .market-terminal-filters .market-kind-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr);
+    margin: 0 0 11px !important;
+    overflow: visible !important;
+  }
+  .market-terminal-filters .market-kind-tabs button {
+    min-width: 0 !important;
+    min-height: 44px !important;
+    padding: 0 2px !important;
+    font-size: 13px !important;
+  }
+  .market-chart-controls {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, .85fr) !important;
+    gap: 8px !important;
+  }
+  .market-search-control { display: grid !important; grid-column: 1 / -1 !important; }
+  .market-chart-controls label { gap: 5px !important; font-size: 10px !important; }
+  .market-chart-controls input, .market-chart-controls select {
+    min-height: 44px !important;
+    padding: 7px 9px !important;
+    border-radius: 9px !important;
+    font-size: 13px !important;
+  }
+
+  .market-terminal-grid { display: flex !important; flex-direction: column; gap: 10px !important; }
+  .market-detail { order: 1; border-radius: var(--mobile-card-radius) !important; box-shadow: none !important; }
+  .market-watchlist { order: 2; border-radius: var(--mobile-card-radius) !important; box-shadow: none !important; }
+  .market-detail-head {
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 13px 14px !important;
+  }
+  .market-detail-head h3 { margin-top: 3px !important; font-size: 17px !important; line-height: 1.25 !important; }
+  .market-detail-head small { font-size: 9px !important; }
+  .market-detail-price strong { font-size: 20px !important; }
+  .market-detail-price span { margin-top: 2px !important; font-size: 11px !important; }
+  .market-detail-price small { font-size: 9px !important; }
+  .market-chart-stats { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+  .market-chart-stats div {
+    min-height: 58px;
+    padding: 10px 4px !important;
+    border-right: 1px solid var(--kai-border) !important;
+    border-bottom: 0 !important;
+  }
+  .market-chart-stats div:last-child { border-right: 0 !important; }
+  .market-chart-stats small { font-size: 8px !important; }
+  .market-chart-stats strong { margin-top: 4px !important; font-size: 10px !important; }
+
+  /* Handheld chart controls: essential periods stay visible, desktop-only tools disappear. */
+  .binance-chart-toolbar {
+    display: grid !important;
+    grid-template-rows: 44px 44px;
+    height: 88px !important;
+    justify-content: stretch !important;
+  }
+  .binance-time-tools { width: 100%; padding-left: 6px !important; }
+  .binance-time-tools > button,
+  .binance-chart-toolbar .market-intervals button {
+    min-width: 42px !important;
+    min-height: 42px !important;
+    padding: 7px 6px !important;
+    font-size: 12px !important;
+  }
+  .binance-chart-toolbar .market-chart-modes {
+    width: 100%;
+    padding: 0 10px !important;
+    border-top: 1px solid #2b3139;
+    overflow-x: auto;
+  }
+  .binance-chart-toolbar .market-chart-modes button {
+    display: block !important;
+    min-width: 84px !important;
+    min-height: 42px !important;
+    font-size: 11px !important;
+  }
+  .binance-chart-readout {
+    min-height: 54px !important;
+    padding: 4px 7px !important;
+    font-size: 9px !important;
+    line-height: 14px !important;
+  }
+  .binance-chart-readout > div { gap: 4px 7px !important; }
+  .binance-chart-readout > div:first-child { flex-wrap: wrap !important; white-space: normal !important; }
+  .binance-chart-readout > div:first-child > span:first-child,
+  .binance-chart-readout > div:first-child > span:nth-child(7),
+  .binance-chart-readout > div:first-child > span:nth-child(8) { display: none !important; }
+  .binance-chart-shell .market-chart-stage,
+  .binance-chart-shell #marketCandleChart {
+    min-height: 300px !important;
+    height: 300px !important;
+  }
+  .binance-chart-shell .market-axis-label,
+  .binance-chart-shell .market-time-label { font-size: 9px !important; }
+  .market-chart-watermark { font-size: 32px !important; }
+  .binance-chart-footer { height: 30px !important; }
+
+  .market-price-layers {
+    display: flex !important;
+    gap: 8px !important;
+    padding: 12px !important;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: inline proximity;
+    scrollbar-width: none;
+  }
+  .market-price-layers::-webkit-scrollbar { display: none; }
+  .market-price-layers > div {
+    flex: 0 0 76%;
+    min-height: 82px;
+    padding: 12px !important;
+    border-radius: 10px !important;
+    scroll-snap-align: start;
+  }
+  .market-price-layers strong { font-size: 12px !important; }
+  .market-price-layers small { font-size: 10px !important; }
+  .market-chart-foot {
+    margin: 0 12px !important;
+    padding: 11px 0 13px !important;
+    gap: 8px !important;
+    font-size: 11px !important;
+  }
+  .market-chart-foot .text-btn { min-height: 40px; padding: 0 !important; font-size: 12px !important; }
+
+  /* Products are a horizontal comparison rail instead of another tall table. */
+  .market-watchlist-head { padding: 13px 14px !important; }
+  .market-watchlist-head h3 { font-size: 15px !important; }
+  .market-watchlist-head small { display: none; }
+  .market-watchlist-body {
+    display: flex;
+    min-height: 0 !important;
+    gap: 8px;
+    padding: 10px;
+    overflow-x: auto;
+    scroll-snap-type: inline proximity;
+    scrollbar-width: none;
+  }
+  .market-watchlist-body::-webkit-scrollbar { display: none; }
+  .market-watch-row {
+    flex: 0 0 76%;
+    min-height: 72px !important;
+    padding: 11px 12px !important;
+    border: 1px solid var(--kai-border) !important;
+    border-radius: 10px !important;
+    scroll-snap-align: start;
+  }
+  .market-watch-row.active { border-color: var(--kai-accent) !important; box-shadow: inset 3px 0 var(--kai-accent); }
+  .market-watch-row b { font-size: 13px !important; }
+
+  /* H100 purchasing keeps every specification and action, with availability shown first. */
+  .h100-product-hub {
+    margin: 0 0 22px !important;
+    padding: 16px !important;
+    border-radius: var(--mobile-card-radius) !important;
+    box-shadow: none !important;
+  }
+  .h100-product-head { align-items: center !important; gap: 10px !important; padding-bottom: 13px !important; }
+  .h100-product-head .eyebrow { display: block !important; }
+  .h100-product-head p { display: block !important; margin: 6px 0 0 !important; font-size: 12px !important; line-height: 1.55 !important; }
+  .h100-product-head h2 { margin: 4px 0 0 !important; font-size: 20px !important; line-height: 1.3 !important; }
+  .h100-stock-state { padding: 7px 9px !important; font-size: 11px !important; }
+  .h100-product-layout { display: flex !important; flex-direction: column; gap: 10px !important; margin-top: 13px !important; }
+  .h100-product-specification { display: block !important; order: 2; padding: 14px !important; border-radius: 11px; }
+  .h100-product-identity > strong { font-size: 20px !important; }
+  .h100-product-identity > small { font-size: 12px !important; }
+  .h100-standard-modes { grid-template-columns: 1fr 1fr !important; gap: 7px !important; margin: 12px 0 !important; }
+  .h100-standard-modes article { min-height: 82px !important; padding: 10px !important; gap: 8px !important; }
+  .h100-standard-modes i { font-size: 16px !important; }
+  .h100-standard-modes b { font-size: 13px !important; }
+  .h100-standard-modes span { font-size: 11px !important; }
+  .h100-standard-data { grid-template-columns: 1fr 1fr !important; }
+  .h100-standard-data div:nth-child(odd) { padding-right: 9px !important; border-right: 1px solid var(--kai-border) !important; }
+  .h100-standard-data div:nth-child(even) { padding-left: 9px !important; }
+  .h100-standard-data dt { font-size: 11px !important; }
+  .h100-standard-data dd { font-size: 12px !important; line-height: 1.45 !important; }
+  .h100-product-flow { grid-template-columns: repeat(6, minmax(68px, 1fr)) !important; margin-top: 12px !important; overflow-x: auto; }
+  .h100-product-flow li { min-height: 58px; padding: 9px 7px !important; }
+  .h100-availability { padding: 14px !important; border-radius: 11px; }
+  .h100-availability { order: 1; }
+  .h100-availability > .eyebrow { display: block !important; }
+  .h100-availability h3 { margin: 0 0 10px !important; font-size: 16px !important; }
+  .h100-live-metrics { grid-template-columns: repeat(3, 1fr) !important; }
+  .h100-live-metrics div {
+    display: grid !important;
+    gap: 4px !important;
+    padding: 9px 5px !important;
+    border-right: 1px solid var(--kai-border);
+    border-bottom: 0 !important;
+  }
+  .h100-live-metrics div:last-child { border-right: 0; }
+  .h100-live-metrics small { font-size: 9px !important; }
+  .h100-live-metrics strong { font-size: 13px !important; text-align: left !important; }
+  .h100-live-list { margin: 10px 0 !important; }
+  .h100-no-stock { padding: 11px 12px !important; }
+  .h100-no-stock b { font-size: 14px !important; }
+  .h100-no-stock p { font-size: 12px !important; line-height: 1.55 !important; }
+  .h100-availability-note { display: none !important; }
+
+  #marketView > .section-head {
+    align-items: flex-end !important;
+    margin: 0 0 12px !important;
+  }
+  #marketView > .section-head h2 { margin: 4px 0 0 !important; font-size: 22px !important; }
+  #marketView > .section-head .text-btn { min-height: 40px; font-size: 12px !important; }
+  #marketView > .filters {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 7px !important;
+    margin: 0 0 14px !important;
+    padding-bottom: 3px;
+    overflow-x: auto !important;
+    scrollbar-width: none;
+  }
+  #marketView > .filters::-webkit-scrollbar { display: none; }
+  #marketView > .filters .chip { flex: 0 0 auto; min-height: 42px; }
+  #marketView > .filters .search { flex: 0 0 86%; min-height: 44px; order: -1; }
+  .offer-grid { gap: 10px !important; }
+
+  /* Remaining app areas keep readable density and a single clear action per card. */
+  .stat-grid { grid-template-columns: 1fr 1fr !important; }
+  .stat-grid .stat:first-child { grid-column: 1 / -1; }
+  .stat { min-height: 0 !important; padding: 15px !important; }
+  .stat strong { font-size: 22px !important; }
+  .asset-row { padding: 14px 0 !important; }
+  .panel-head { align-items: flex-start !important; gap: 10px !important; }
+  .panel-head h2 { font-size: 19px !important; }
+  .seg { max-width: 100%; overflow-x: auto; }
+  .seg button { min-height: 40px; white-space: nowrap; }
+  .quote-layout, .sell-layout, .swap-layout { grid-template-columns: 1fr !important; }
+  .swap-arrow { width: 44px !important; height: 44px !important; margin: -4px auto !important; transform: rotate(90deg); }
+  .result-card, .sell-result { position: static !important; }
+  .quote-breakdown { grid-template-columns: 1fr !important; }
+  .model-panel { margin-top: 14px !important; }
+  .model-cloud { max-height: 280px; overflow: auto; }
+
+  /* Progressive disclosure keeps every advanced module without forcing it into the first scan. */
+  .mobile-section-group {
+    margin: 12px 0 !important;
+    overflow: hidden;
+    border: 1px solid var(--kai-border) !important;
+    border-radius: var(--mobile-card-radius) !important;
+    background: var(--kai-surface) !important;
+    box-shadow: 0 5px 16px rgba(16, 52, 33, .04);
+  }
+  .mobile-section-group > summary {
+    display: flex;
+    min-height: 58px;
+    padding: 13px 15px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--kai-ink);
+    cursor: pointer;
+    list-style: none;
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .mobile-section-group > summary::-webkit-details-marker { display: none; }
+  .mobile-section-group > summary b {
+    flex: 0 0 auto;
+    color: var(--kai-accent);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .mobile-section-group > summary b::after { margin-left: 5px; content: "＋"; font-size: 14px; }
+  .mobile-section-group[open] > summary { border-bottom: 1px solid var(--kai-border); }
+  .mobile-section-group[open] > summary b { font-size: 0; }
+  .mobile-section-group[open] > summary b::before { content: "收起"; font-size: 11px; }
+  .mobile-section-group[open] > summary b::after { content: "－"; }
+  .mobile-section-group > [data-mobile-section-content] {
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* Quote inputs stay complete, but compact repeated tariff and SLA choices into rails. */
+  #quoteForm .time-tariff.tariff-seven {
+    display: flex !important;
+    gap: 8px !important;
+    padding-bottom: 3px;
+    overflow-x: auto;
+    scroll-snap-type: inline proximity;
+    scrollbar-width: none;
+  }
+  #quoteForm .time-tariff.tariff-seven::-webkit-scrollbar { display: none; }
+  #quoteForm .time-tariff.tariff-seven > * { flex: 0 0 46%; scroll-snap-align: start; }
+  #quoteForm .radio-row {
+    display: flex !important;
+    gap: 8px !important;
+    overflow-x: auto;
+    scroll-snap-type: inline proximity;
+    scrollbar-width: none;
+  }
+  #quoteForm .radio-row::-webkit-scrollbar { display: none; }
+  #quoteForm .radio-row > label { flex: 0 0 76%; min-height: 86px; scroll-snap-align: start; }
+
+  /* Assessment reads as a numbered workflow; detailed cost and later stages expand on demand. */
+  #assessmentView.active { display: flex !important; flex-direction: column; }
+  #assessmentView > .page-title { order: 0; }
+  #assessmentView > .enterprise-gate { order: 1; }
+  #assessmentView > .assessment-layout { order: 2; }
+  #assessmentView > .mobile-section-group { order: 3; }
+  #assessmentView .enterprise-head h2,
+  #assessmentView .assessment-form h2 { font-size: 21px !important; }
+  #assessmentView .enterprise-layout,
+  #assessmentView .assessment-layout { gap: 10px !important; }
+  #assessmentView .visibility-boundary { margin-bottom: 0 !important; }
+
+  :focus-visible { outline: 3px solid color-mix(in srgb, var(--kai-accent) 42%, transparent) !important; outline-offset: 2px; }
+}
+
+@media (max-width: 360px) {
+  :root { --mobile-gutter: 12px; }
+  .mobile-app-brand small { display: none; }
+  .mobile-app-brand { grid-template-rows: 36px; }
+  .market-overview-stats small { font-size: 8px !important; }
+  .market-overview-stats strong { font-size: 16px !important; }
+  .binance-time-tools > button,
+  .binance-chart-toolbar .market-intervals button { min-width: 39px !important; }
+  .binance-chart-toolbar .market-chart-modes button.active { min-width: 48px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-app-brand *, .sidebar *, .view * {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}

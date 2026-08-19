@@ -4,9 +4,9 @@
 
 ## KAI Identity 统一登录
 
-Android 与 iOS 均已登记 `cloudpay://auth/callback` 原生回跳。App 登录使用系统浏览器和服务端 Authorization Code + PKCE 流程，KAI Identity 访问令牌及客户端密钥不会进入 App。登录完成后，CloudPay 服务端签发两分钟有效、只能使用一次且与 App 随机绑定码关联的登录票据，App 再用该票据建立自己的 HttpOnly 会话。
+Android 与 iOS 均已登记 `cloudpay://auth/callback` 原生回跳。App 内先显示专用移动登录页，用户确认 KAI 账户邮箱后才进入受保护的身份验证步骤。登录使用系统浏览器和服务端 Authorization Code + PKCE 流程，KAI Identity 访问令牌及客户端密钥不会进入 App。登录完成后，CloudPay 服务端签发两分钟有效、只能使用一次且与 App 随机绑定码关联的登录票据，App 再用该票据建立自己的 HttpOnly 会话，并在页面更新前二次确认登录状态。
 
-当前移动版本为 `1.1.0`：Android `versionCode 2`，iOS `CURRENT_PROJECT_VERSION 2`。修改原生回跳配置后必须重新签名并发布新安装包，旧版安装包不会自动获得新的 URL Scheme。
+当前移动版本为 `1.2.0`：Android `versionCode 3`，iOS `CURRENT_PROJECT_VERSION 3`。修改原生回跳配置后必须重新签名并发布新安装包，旧版安装包不会自动获得新的 URL Scheme。
 
 发布前必须先准备：
 

@@ -508,16 +508,36 @@
     const dialog = document.querySelector('#authDialog');
     const loginPane = document.querySelector('#loginPane');
     const registerPane = document.querySelector('#registerPane');
+    const nativeRuntime = Boolean(window.KAINative?.native);
     dialog?.classList.add('kai-identity-auth');
+    dialog?.classList.toggle('kai-mobile-identity', nativeRuntime);
     const heading = dialog?.querySelector('.auth-wrap > h2');
-    if (heading) heading.textContent = '使用 KAI 统一账户';
+    const eyebrow = dialog?.querySelector('.auth-wrap > .eyebrow');
+    if (heading) heading.textContent = nativeRuntime ? '登录 CloudPay' : '使用 KAI 统一账户';
+    if (eyebrow && nativeRuntime) eyebrow.textContent = 'SECURE MOBILE SIGN IN';
     dialog?.querySelector('.auth-tabs')?.setAttribute('hidden', '');
     if (registerPane) registerPane.hidden = true;
 
     const existingChildren = [...loginPane.children].filter(node => node.id !== 'demoLogin' && !node.classList.contains('auth-divider'));
     const identityBlock = document.createElement('div');
-    identityBlock.className = 'identity-auth-block';
-    identityBlock.innerHTML = `
+    identityBlock.className = `identity-auth-block${nativeRuntime ? ' identity-mobile-page' : ''}`;
+    identityBlock.innerHTML = nativeRuntime ? `
+      <div class="mobile-auth-brand">
+        <div class="identity-auth-mark" aria-hidden="true">K</div>
+        <div><b>CloudPay 账户</b><p>登录后可查看订单、资产与算力置换记录</p></div>
+        <span class="mobile-auth-secure">安全连接</span>
+      </div>
+      <div class="mobile-auth-step"><span>1</span><div><b>输入 KAI 账户</b><p>先在 App 内确认账户，再进入受保护的身份验证步骤。</p></div></div>
+      <label class="mobile-identity-field" for="kaiMobileLoginAccount">
+        <span>KAI 账户邮箱</span>
+        <input id="kaiMobileLoginAccount" name="kai_account" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="name@company.com" aria-describedby="kaiMobileAccountHelp">
+      </label>
+      <p class="mobile-auth-field-help" id="kaiMobileAccountHelp">CloudPay 只传递账户提示；密码和验证码仍由 KAI Identity 安全校验。</p>
+      <p class="auth-error identity-auth-error" id="kaiIdentityError" role="alert" aria-live="polite"></p>
+      <button class="primary wide identity-login" id="kaiIdentityLogin" type="button">继续安全登录 <span aria-hidden="true">→</span></button>
+      <div class="mobile-auth-step mobile-auth-step-muted"><span>2</span><div><b>完成身份验证</b><p>验证完成会自动返回 App，并在 CloudPay 内建立登录会话。</p></div></div>
+      <p class="production-auth-hint" id="identityChannelState" aria-live="polite">正在检查登录通道…</p>
+      <div class="mobile-auth-assurance" aria-label="登录安全说明"><span>一次性回传</span><span>会话加密</span><span>可随时退出</span></div>` : `
       <div class="identity-auth-mark" aria-hidden="true">K</div>
       <div><b>KAI Identity</b><p>使用与 cloud.kai.com 相同的邮箱账户登录或注册；认证和邮箱验证均在 KAI 身份中心完成。</p></div>
       <a class="primary wide identity-login" id="kaiIdentityLogin" href="/api/auth/kai/start?return_to=/">使用 KAI Identity 登录 / 注册 <span>↗</span></a>
@@ -538,17 +558,48 @@
     if (localSubmit) localSubmit.textContent = '运营账号登录';
     document.querySelector('#demoLogin')?.remove();
 
-    document.querySelector('#kaiIdentityLogin')?.addEventListener('click', async event => {
-      const ready = event.currentTarget.dataset.ready === 'true';
+    const identityLogin = document.querySelector('#kaiIdentityLogin');
+    const mobileAccount = document.querySelector('#kaiMobileLoginAccount');
+    mobileAccount?.addEventListener('input', event => {
+      const value = String(event.currentTarget.value || '').trim().toLowerCase();
+      const error = document.querySelector('#kaiIdentityError');
+      if (error && /^[^@\s]{1,64}@[^@\s]{1,189}$/.test(value)) error.textContent = '';
+    });
+    mobileAccount?.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        identityLogin?.click();
+      }
+    });
+    identityLogin?.addEventListener('click', async event => {
+      const button = event.currentTarget;
+      const ready = button.dataset.ready === 'true';
       if (window.KAINative?.native && ready) {
         event.preventDefault();
-        const opened = await window.KAINative.startIdentityLogin(
-          `${window.location.pathname}${window.location.search}${window.location.hash}`
-        ).catch(() => false);
-        if (!opened) {
-          const error = document.querySelector('#loginPane .auth-error');
-          if (error) error.textContent = '无法打开 KAI Identity 登录窗口，请检查系统浏览器设置。';
+        const loginHint = String(mobileAccount?.value || '').trim().toLowerCase();
+        const error = document.querySelector('#kaiIdentityError') || document.querySelector('#loginPane .auth-error');
+        const status = document.querySelector('#identityChannelState');
+        if (!/^[^@\s]{1,64}@[^@\s]{1,189}$/.test(loginHint)) {
+          if (error) error.textContent = '请输入有效的 KAI 账户邮箱';
+          mobileAccount?.focus();
+          return;
         }
+        if (error) error.textContent = '';
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+        if (status) status.textContent = '正在打开安全验证，请在完成后返回 CloudPay…';
+        const opened = await window.KAINative.startIdentityLogin(
+          `${window.location.pathname}${window.location.search}${window.location.hash}`,
+          { loginHint }
+        ).catch(failure => {
+          if (error) error.textContent = failure.message || '无法准备移动登录';
+          return false;
+        });
+        if (!opened && error && !error.textContent) {
+          error.textContent = '无法打开安全验证窗口，请检查网络和系统浏览器设置。';
+        }
+        button.disabled = false;
+        button.removeAttribute('aria-busy');
         return;
       }
       if (ready) return;
@@ -601,7 +652,7 @@
     hint.dataset.ready = String(ready);
     hint.textContent = ready
       ? (window.KAINative?.native
-        ? 'App 统一登录已连接；系统浏览器认证后会安全返回 CloudPay App。'
+        ? '登录通道已连接；完成验证后会自动返回并确认 App 登录状态。'
         : '统一登录已连接；登录成功后会回到 CloudPay 并建立独立安全会话。')
       : `统一登录待配置：${(identity.missing || []).join('、') || '客户端资料不完整'}。`;
     const fallback = document.querySelector('.identity-local-fallback');

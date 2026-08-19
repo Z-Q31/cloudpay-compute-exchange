@@ -931,6 +931,7 @@ def initialize_database() -> None:
             CREATE TABLE IF NOT EXISTS mobile_login_preparations(
               handle_hash TEXT PRIMARY KEY,
               app_nonce_hash TEXT NOT NULL,
+              login_hint TEXT,
               return_to TEXT NOT NULL,
               expires_at TEXT NOT NULL,
               consumed_at TEXT,
@@ -1134,6 +1135,7 @@ def initialize_database() -> None:
         add_column_if_missing(connection, "users", "lifecycle_status", "TEXT NOT NULL DEFAULT 'active'")
         add_column_if_missing(connection, "users", "deletion_requested_at", "TEXT")
         add_column_if_missing(connection, "users", "anonymized_at", "TEXT")
+        add_column_if_missing(connection, "mobile_login_preparations", "login_hint", "TEXT")
         connection.execute("UPDATE orders SET product_code=COALESCE(product_code,gpu) WHERE product_code IS NULL")
         connection.execute("UPDATE allocations SET product_code=COALESCE(product_code,gpu),provider=COALESCE(provider,'KAI 已验资源池') WHERE product_code IS NULL OR provider IS NULL")
         connection.execute(
@@ -1755,6 +1757,7 @@ class KaiHandler(BaseHTTPRequestHandler):
             raise ApiError(503, "KAI Identity 统一登录客户端尚未配置完成", "kai_identity_not_configured")
         return_to = safe_return_to(query.get("return_to", ["/"])[0])
         app_nonce_hash = None
+        login_hint = ""
         if mobile:
             login_handle = str(query.get("login_handle", [""])[0]).strip()
             if not re.fullmatch(r"[A-Za-z0-9_-]{43,180}", login_handle):
@@ -1769,12 +1772,13 @@ class KaiHandler(BaseHTTPRequestHandler):
                     ).fetchone()
                     if not preparation or preparation["expires_at"] <= moment or preparation["consumed_at"]:
                         raise ApiError(401, "App 登录准备信息已失效，请重新登录", "mobile_identity_handle_expired")
-                    connection.execute(
-                        "UPDATE mobile_login_preparations SET consumed_at=? WHERE handle_hash=? AND consumed_at IS NULL",
-                        (moment, token_hash(login_handle)),
-                    )
                     return_to = safe_return_to(preparation["return_to"])
                     app_nonce_hash = preparation["app_nonce_hash"]
+                    login_hint = str(preparation["login_hint"] or "")
+                    connection.execute(
+                        "DELETE FROM mobile_login_preparations WHERE handle_hash=?",
+                        (token_hash(login_handle),),
+                    )
                     connection.execute("COMMIT")
                 except Exception:
                     if connection.in_transaction:
@@ -1799,7 +1803,7 @@ class KaiHandler(BaseHTTPRequestHandler):
                 ),
             )
         redirect_uri = IDENTITY_MOBILE_REDIRECT_URI if mobile else IDENTITY_REDIRECT_URI
-        authorization_url = f"{IDENTITY_AUTHORIZATION_ENDPOINT}?{urlencode({
+        authorization_params = {
             'response_type': 'code',
             'client_id': IDENTITY_CLIENT_ID,
             'redirect_uri': redirect_uri,
@@ -1809,7 +1813,10 @@ class KaiHandler(BaseHTTPRequestHandler):
             'code_challenge': code_challenge,
             'code_challenge_method': 'S256',
             'response_mode': 'query',
-        })}"
+        }
+        if login_hint:
+            authorization_params["login_hint"] = login_hint
+        authorization_url = f"{IDENTITY_AUTHORIZATION_ENDPOINT}?{urlencode(authorization_params)}"
         self.redirect_response(authorization_url, [self.oidc_transaction_cookie(transaction_id)])
 
     def kai_identity_request(self, request: Request, error_message: str) -> dict:
@@ -2001,6 +2008,9 @@ class KaiHandler(BaseHTTPRequestHandler):
         app_nonce = str(data.get("app_nonce") or "").strip()
         if not re.fullmatch(r"[A-Za-z0-9_-]{43,180}", app_nonce):
             raise ApiError(422, "App 登录绑定码无效，请重新发起登录", "mobile_identity_nonce_invalid")
+        login_hint = str(data.get("login_hint") or "").strip().lower()
+        if not re.fullmatch(r"[^@\s]{1,64}@[^@\s]{1,189}", login_hint):
+            raise ApiError(422, "请输入有效的 KAI 账户邮箱", "mobile_identity_login_hint_invalid")
         return_to = safe_return_to(data.get("return_to") or "/")
         login_handle = secrets.token_urlsafe(48)
         created = now_iso()
@@ -2010,8 +2020,8 @@ class KaiHandler(BaseHTTPRequestHandler):
         with db_connect() as connection:
             connection.execute("DELETE FROM mobile_login_preparations WHERE expires_at<=?", (created,))
             connection.execute(
-                "INSERT INTO mobile_login_preparations(handle_hash,app_nonce_hash,return_to,expires_at,created_at) VALUES(?,?,?,?,?)",
-                (token_hash(login_handle), token_hash(app_nonce), return_to, expires, created),
+                "INSERT INTO mobile_login_preparations(handle_hash,app_nonce_hash,login_hint,return_to,expires_at,created_at) VALUES(?,?,?,?,?,?)",
+                (token_hash(login_handle), token_hash(app_nonce), login_hint, return_to, expires, created),
             )
         self.json_response(201, {
             "ok": True,

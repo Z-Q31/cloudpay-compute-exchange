@@ -10,52 +10,48 @@
   view.id = 'supplierCommissionView';
   view.innerHTML = `
     <div class="page-title supplier-commission-title">
-      <div><span class="eyebrow">SUPPLIER REFERRAL LEDGER</span><h1>供应商返佣</h1><p>供应商邀请推广伙伴，推荐关系由伙伴本人确认；合格订单验收后自动计入返佣，并与结算、争议和退款保持同一账务状态。</p></div>
-      <span class="supplier-commission-policy" id="supplierCommissionPolicy">30 天归因 · T+7 解锁 · 单笔封顶 ¥500</span>
+      <div><span class="eyebrow">SUPPLIER CARD-HOUR REBATE</span><h1>供应商返佣</h1><p>供应商算力订单完成验收后，平台按实际成交卡时和订单金额档位计算返佣。返佣以 GPU 卡时入账，不走现金推广佣金。</p></div>
+      <span class="supplier-commission-policy">¥50,000 以上 · 平台审核</span>
     </div>
 
     <section class="supplier-commission-gate" id="supplierCommissionGate">
-      <span class="supplier-commission-gate-mark">％</span>
-      <div><small>账户状态</small><b id="supplierCommissionIdentity">正在读取 CloudPay 账户</b><p id="supplierCommissionHint">登录后可查看邀请、推广链接和返佣账本。</p></div>
+      <span class="supplier-commission-gate-mark">卡时</span>
+      <div><small>返佣账户</small><b id="supplierCommissionIdentity">正在读取 CloudPay 账户</b><p id="supplierCommissionHint">登录后查看返佣卡时和审核进度。</p></div>
       <button class="secondary" type="button" id="supplierCommissionLogin">登录账户</button>
     </section>
 
+    <section class="rebate-rules" aria-labelledby="rebateRulesTitle">
+      <div class="supplier-commission-section-head"><div><span class="eyebrow">TIERED RULES</span><h2 id="rebateRulesTitle">按单笔成交金额匹配返佣比例</h2><p>金额越大，返还卡时的绝对数量随成交卡时增加；比例按以下档位确定，不做累进拆分。</p></div></div>
+      <div class="rebate-tier-grid" id="rebateTierGrid"></div>
+    </section>
+
+    <section class="rebate-flow" aria-label="返佣流程">
+      <article><i>1</i><div><b>订单完成验收</b><span>仅计算供应商已成交的 GPU 卡时订单</span></div></article>
+      <article><i>2</i><div><b>确认成交卡时</b><span>以订单的标准 GPU 时数量为计算基数</span></div></article>
+      <article><i>3</i><div><b>匹配金额档位</b><span>5 万元及以下自动返还，超过 5 万元进入审核</span></div></article>
+      <article><i>4</i><div><b>返还供应商算力库</b><span>生成独立卡时资产批次，全程留痕</span></div></article>
+    </section>
+
     <div id="supplierCommissionContent" hidden>
-      <section class="supplier-commission-kpis" aria-label="返佣总览">
-        <article><small>冻结中</small><strong id="commissionHolding">¥ 0.00</strong><span>订单验收后进入保护期</span></article>
-        <article><small>可结算</small><strong id="commissionAvailable">¥ 0.00</strong><span>无争议、退款后解锁</span></article>
-        <article><small>累计已付</small><strong id="commissionPaid">¥ 0.00</strong><span>持牌机构返佣流水</span></article>
-        <article><small>合作关系</small><strong id="commissionPartnerCount">0</strong><span>已接受的供应商与伙伴</span></article>
+      <section class="supplier-commission-kpis">
+        <article><small>成交卡时</small><strong id="rebateSourceHours">0</strong><span>已纳入返佣计算</span></article>
+        <article><small>已返还卡时</small><strong id="rebateIssuedHours">0</strong><span>已进入供应商算力库</span></article>
+        <article><small>待审核卡时</small><strong id="rebatePendingHours">0</strong><span>单笔超过 5 万元</span></article>
+        <article><small>返佣订单</small><strong id="rebateOrderCount">0</strong><span>一笔订单一条记录</span></article>
       </section>
 
-      <section class="supplier-program" id="supplierProgram" hidden>
-        <div class="supplier-commission-section-head"><div><span class="eyebrow">PROGRAM CONTROL</span><h2>我的供应商返佣计划</h2><p>比例只影响之后发出的邀请；已接受合作关系沿用确认时的比例。</p></div></div>
-        <div class="supplier-program-grid">
-          <form class="supplier-program-card" id="supplierProgramForm">
-            <label>新邀请返佣比例<div class="supplier-rate-input"><input id="supplierCommissionRate" type="number" min="1" max="20" step="0.1" required><span>%</span></div></label>
-            <label>计划状态<select id="supplierCommissionStatus"><option value="active">开放邀请与归因</option><option value="paused">暂停新归因</option></select></label>
-            <button class="primary" type="submit">保存计划</button><p role="status" id="supplierProgramStatus"></p>
-          </form>
-          <form class="supplier-program-card" id="supplierInvitationForm">
-            <label>邀请推广伙伴<input id="supplierPartnerAccount" autocomplete="off" placeholder="输入已注册手机号或邮箱" required></label>
-            <p>邀请不会扣除对方余额。伙伴接受后才生成可用推广码。</p>
-            <button class="primary" type="submit">发送返佣邀请</button><p role="status" id="supplierInvitationStatus"></p>
-          </form>
-        </div>
-        <div class="supplier-commission-table-wrap"><div class="supplier-commission-table-head"><h3>推广伙伴</h3><span id="supplierPartnerTotal">0 位</span></div><div class="supplier-commission-table" id="supplierPartnerTable"></div></div>
-        <div class="supplier-commission-table-wrap"><div class="supplier-commission-table-head"><h3>供应商支出账本</h3><span>验收、冻结、解锁、支付、冲正全程留痕</span></div><div class="supplier-commission-table" id="supplierExpenseTable"></div></div>
+      <section id="supplierRebateLedger" hidden>
+        <div class="supplier-commission-section-head"><div><span class="eyebrow">SUPPLIER LEDGER</span><h2>我的返佣卡时账本</h2><p>订单金额只决定比例，最终返还数量 = 成交卡时 × 对应比例。</p></div></div>
+        <div class="supplier-commission-table-wrap"><div class="supplier-commission-table-head"><h3>返佣明细</h3><span id="supplierRebateTotal">0 笔</span></div><div class="supplier-commission-table" id="supplierRebateTable"></div></div>
       </section>
 
-      <section class="partner-program" id="partnerProgram">
-        <div class="supplier-commission-section-head"><div><span class="eyebrow">PARTNER CENTER</span><h2>我的推广合作</h2><p>只有你本人接受后合作才生效；推广链接仅记录供应商、伙伴和 30 天有效期，不包含账户或支付信息。</p></div></div>
-        <div class="supplier-invitation-list" id="supplierInvitationList"></div>
-        <div class="supplier-link-list" id="supplierPartnershipList"></div>
-        <div class="supplier-commission-table-wrap"><div class="supplier-commission-table-head"><h3>我的返佣明细</h3><span>订单完成验收后生成</span></div><div class="supplier-commission-table" id="partnerCommissionTable"></div></div>
+      <section id="adminRebateReview" hidden>
+        <div class="supplier-commission-section-head"><div><span class="eyebrow">PLATFORM REVIEW</span><h2>大额返佣审核</h2><p>单笔成交金额超过 5 万元统一按 0.2% 计算，审核通过后才向供应商算力库发放卡时。</p></div></div>
+        <div class="supplier-commission-table-wrap"><div class="supplier-commission-table-head"><h3>待处理记录</h3><span id="adminRebateTotal">0 笔</span></div><div class="supplier-commission-table" id="adminRebateTable"></div></div>
       </section>
 
-      <section class="admin-commission-program" id="adminCommissionProgram" hidden>
-        <div class="supplier-commission-section-head"><div><span class="eyebrow">PLATFORM SETTLEMENT</span><h2>平台返佣账本</h2><p>仅可支付已解锁且关联供应商结算单可支付的返佣；退款追偿记录不会被支付操作覆盖。</p></div></div>
-        <div class="supplier-commission-table-wrap"><div class="supplier-commission-table-head"><h3>待处理返佣</h3><span id="adminCommissionTotal">0 笔</span></div><div class="supplier-commission-table" id="adminCommissionTable"></div></div>
+      <section class="rebate-ineligible" id="rebateIneligible" hidden>
+        <b>当前账户不是已认证供应商</b><p>该板块只向已认证供应商展示自己的返佣卡时账本；平台管理账户可处理大额审核。</p>
       </section>
     </div>`;
   main.append(view);
@@ -64,11 +60,11 @@
   const safeText = value => String(value ?? '').replace(/[&<>'"]/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
   })[character]);
-  const money = cents => `¥ ${(Number(cents || 0) / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const money = cents => `¥${(Number(cents || 0) / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const hours = value => Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 0, maximumFractionDigits: 6 });
   const statusLabels = {
-    pending_confirmation: '待伙伴确认', active: '合作中', rejected: '已拒绝',
-    holding: '冻结中', available: '可结算', paid: '已支付', paused: '争议/退款暂停',
-    reversed: '已冲正', clawback_required: '待追回'
+    issued: '已返还卡时', pending_review: '待平台审核', paused: '争议/退款冻结',
+    rejected: '审核未通过', reversed: '已冲正', clawback_required: '待追回'
   };
   let csrf = '';
   let identity = null;
@@ -89,111 +85,60 @@
     return payload;
   }
 
-  function referralUrl(code) {
-    const url = new URL(location.origin + location.pathname);
-    url.searchParams.set('supplier_ref', code);
-    return url.toString();
+  function rangeLabel(tier) {
+    if (tier.maximum_cents === null) return `超过 ${money(overview.policy.review_threshold_cents)}`;
+    if (tier.minimum_cents <= 100) return `¥1 – ${money(tier.maximum_cents)}`;
+    return `超过 ${money(tier.minimum_cents - 1)} – ${money(tier.maximum_cents)}`;
   }
 
-  async function copyText(value, message) {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch (_) {
-      const input = document.createElement('textarea');
-      input.value = value; document.body.append(input); input.select(); document.execCommand('copy'); input.remove();
-    }
-    if (typeof window.toast === 'function') window.toast(message);
+  function renderPolicy() {
+    $('#rebateTierGrid').innerHTML = overview.policy.tiers.map((tier, index) => `
+      <article class="rebate-tier ${tier.review_required ? 'requires-review' : ''}">
+        <small>档位 ${index + 1}${tier.review_required ? ' · 需审核' : ''}</small>
+        <b>${safeText(rangeLabel(tier))}</b>
+        <strong>${(Number(tier.rate_bps) / 100).toFixed(1)}%</strong>
+        <span>成交卡时 × ${(Number(tier.rate_bps) / 100).toFixed(1)}%</span>
+      </article>`).join('');
   }
 
-  function renderPartners(rows) {
-    $('#supplierPartnerTotal').textContent = `${rows.filter(row => row.status === 'active').length} 位合作中`;
-    $('#supplierPartnerTable').innerHTML = rows.length ? rows.map(row => `
-      <article class="supplier-commission-row">
-        <div><small>${safeText(row.partner_account)}</small><b>${safeText(row.partner_name)}</b></div>
-        <span>${(Number(row.commission_rate_bps) / 100).toFixed(2)}%</span>
+  function renderSupplierRows(rows) {
+    $('#supplierRebateTotal').textContent = `${rows.length} 笔`;
+    $('#supplierRebateTable').innerHTML = rows.length ? rows.map(row => `
+      <article class="supplier-commission-row rebate-ledger-row">
+        <div><small>${safeText(row.order_no)}</small><b>${safeText(row.product_code || row.gpu)} · ${safeText(row.region)}</b></div>
+        <div><small>成交金额</small><b>${money(row.amount_cents)}</b></div>
+        <div><small>成交卡时</small><b>${hours(row.source_card_hours)}</b></div>
+        <div><small>比例</small><b>${Number(row.rebate_rate_percent).toFixed(1)}%</b></div>
+        <div><small>返还卡时</small><strong>${hours(row.rebate_card_hours)}</strong></div>
         <span class="commission-state" data-state="${safeText(row.status)}">${safeText(statusLabels[row.status] || row.status)}</span>
-        <time>${safeText((row.accepted_at || row.invited_at || '').replace('T', ' ').slice(0, 16))}</time>
-      </article>`).join('') : '<div class="supplier-commission-empty">还没有推广伙伴。输入已注册账户发出第一份邀请。</div>';
+      </article>`).join('') : '<div class="supplier-commission-empty">暂无返佣记录。供应商 GPU 卡时订单完成验收后会自动写入。</div>';
   }
 
-  function renderLedger(target, rows, counterpart) {
-    target.innerHTML = rows.length ? rows.map(row => `
-      <article class="supplier-commission-row ledger">
-        <div><small>${safeText(row.order_no || row.order_id)}</small><b>${safeText(row[counterpart] || 'CloudPay 账户')}</b></div>
-        <span>${(Number(row.commission_rate_bps) / 100).toFixed(2)}%</span>
-        <strong>${money(row.amount_cents)}</strong>
-        <span class="commission-state" data-state="${safeText(row.status)}">${safeText(statusLabels[row.status] || row.status)}</span>
-        <time>${safeText((row.created_at || '').replace('T', ' ').slice(0, 16))}</time>
-      </article>`).join('') : '<div class="supplier-commission-empty">暂无返佣明细。合格订单完成验收后会自动生成账本记录。</div>';
-  }
-
-  function renderInvitations(rows) {
-    $('#supplierInvitationList').innerHTML = rows.length ? rows.map(row => `
-      <article class="supplier-invitation-card"><div><small>返佣合作邀请</small><h3>${safeText(row.supplier_name)}</h3><p>订单实付金额 × ${(Number(row.commission_rate_bps) / 100).toFixed(2)}%，单笔最高 ${money(overview.policy.maximum_commission_cents)}。</p></div><div><button class="secondary" data-invitation-action="reject" data-id="${safeText(row.id)}">拒绝</button><button class="primary" data-invitation-action="accept" data-id="${safeText(row.id)}">接受邀请</button></div></article>`).join('') : '';
-    $('#supplierInvitationList').querySelectorAll('[data-invitation-action]').forEach(button => {
-      button.addEventListener('click', () => resolveInvitation(button.dataset.id, button.dataset.invitationAction));
-    });
-  }
-
-  function renderPartnerships(rows) {
-    $('#supplierPartnershipList').innerHTML = rows.length ? rows.map(row => {
-      const link = referralUrl(row.referral_code);
-      return `<article class="supplier-link-card"><div><small>${safeText(row.supplier_name)}</small><b>${safeText(row.referral_code)}</b><span>${(Number(row.commission_rate_bps) / 100).toFixed(2)}% · 30 天归因</span></div><div class="supplier-link-control"><input readonly value="${safeText(link)}"><button data-copy-referral="${safeText(link)}">复制推广链接</button></div></article>`;
-    }).join('') : '<div class="supplier-commission-empty">暂无已接受的推广合作。</div>';
-    $('#supplierPartnershipList').querySelectorAll('[data-copy-referral]').forEach(button => {
-      button.addEventListener('click', () => copyText(button.dataset.copyReferral, '推广链接已复制'));
-    });
-  }
-
-  function renderAdminCommissions(rows) {
-    $('#adminCommissionTotal').textContent = `${rows.length} 笔待处理`;
-    $('#adminCommissionTable').innerHTML = rows.length ? rows.map(row => `
-      <article class="supplier-commission-row admin-ledger">
-        <div><small>${safeText(row.order_no || row.order_id)}</small><b>${safeText(row.supplier_name)} → ${safeText(row.partner_name)}</b></div>
-        <strong>${money(row.amount_cents)}</strong>
-        <span class="commission-state" data-state="${safeText(row.status)}">${safeText(statusLabels[row.status] || row.status)}</span>
-        ${row.status === 'available' ? `<div class="supplier-admin-payout"><input aria-label="返佣支付流水" data-payout-ref="${safeText(row.id)}" placeholder="输入持牌机构流水号"><button type="button" data-admin-pay="${safeText(row.id)}">登记支付</button></div>` : '<span class="supplier-admin-wait">等待解锁或人工处理</span>'}
-      </article>`).join('') : '<div class="supplier-commission-empty">当前没有待处理返佣。</div>';
-    $('#adminCommissionTable').querySelectorAll('[data-admin-pay]').forEach(button => {
-      button.addEventListener('click', () => payAdminCommission(button.dataset.adminPay));
+  function renderAdminRows(rows) {
+    $('#adminRebateTotal').textContent = `${rows.length} 笔待处理`;
+    $('#adminRebateTable').innerHTML = rows.length ? rows.map(row => `
+      <article class="admin-rebate-card">
+        <div class="admin-rebate-facts"><div><small>${safeText(row.order_no)}</small><b>${safeText(row.supplier_name)}</b><span>${safeText(row.supplier_account)}</span></div><dl><div><dt>成交金额</dt><dd>${money(row.amount_cents)}</dd></div><div><dt>成交卡时</dt><dd>${hours(row.source_card_hours)}</dd></div><div><dt>统一比例</dt><dd>${Number(row.rebate_rate_percent).toFixed(1)}%</dd></div><div><dt>拟返还</dt><dd>${hours(row.rebate_card_hours)} 卡时</dd></div></dl><span class="commission-state" data-state="${safeText(row.status)}">${safeText(statusLabels[row.status] || row.status)}</span></div>
+        ${row.status === 'pending_review' ? `<div class="admin-rebate-action"><input data-review-reason="${safeText(row.id)}" placeholder="填写审核依据（至少 4 个字）"><button class="secondary" type="button" data-rebate-review="reject" data-id="${safeText(row.id)}">拒绝</button><button class="primary" type="button" data-rebate-review="approve" data-id="${safeText(row.id)}">审核通过并发卡时</button></div>` : '<p class="admin-rebate-blocked">该记录因争议、退款或追偿被冻结，不能直接发放。</p>'}
+      </article>`).join('') : '<div class="supplier-commission-empty">当前没有超过 5 万元的待审核返佣。</div>';
+    $('#adminRebateTable').querySelectorAll('[data-rebate-review]').forEach(button => {
+      button.addEventListener('click', () => reviewRebate(button.dataset.id, button.dataset.rebateReview));
     });
   }
 
   function render() {
-    const supplier = overview.supplier;
-    const partner = overview.partner;
-    const supplierSummary = supplier.summary;
-    const partnerSummary = partner.summary;
-    const adminRows = adminOverview?.supplier_commissions || [];
-    const adminSummary = {
-      holding_cents: adminRows.filter(row => ['holding', 'paused'].includes(row.status)).reduce((sum, row) => sum + Number(row.amount_cents || 0), 0),
-      available_cents: adminRows.filter(row => row.status === 'available').reduce((sum, row) => sum + Number(row.amount_cents || 0), 0),
-      paid_cents: 0
-    };
-    const summary = identity.role === 'admin' ? adminSummary : supplier.enabled ? supplierSummary : partnerSummary;
-    $('#commissionHolding').textContent = money(summary.holding_cents);
-    $('#commissionAvailable').textContent = money(summary.available_cents);
-    $('#commissionPaid').textContent = money(summary.paid_cents);
-    $('#commissionPartnerCount').textContent = identity.role === 'admin' ? String(adminRows.length) : String(
-      (supplier.partners || []).filter(row => row.status === 'active').length + (partner.partnerships || []).length
-    );
-    $('#supplierCommissionPolicy').textContent = `${overview.policy.attribution_window_days} 天归因 · T+${overview.policy.hold_days} 解锁 · 单笔封顶 ${money(overview.policy.maximum_commission_cents)}`;
-    $('#supplierProgram').hidden = !supplier.enabled;
-    if (supplier.enabled) {
-      $('#supplierCommissionRate').value = (Number(supplier.program.commission_rate_bps) / 100).toFixed(2);
-      $('#supplierCommissionStatus').value = supplier.program.status;
-      renderPartners(supplier.partners || []);
-      renderLedger($('#supplierExpenseTable'), supplier.commissions || [], 'partner_name');
-    }
-    $('#partnerProgram').hidden = identity.role === 'admin';
-    $('#adminCommissionProgram').hidden = identity.role !== 'admin';
-    if (identity.role === 'admin') {
-      renderAdminCommissions(adminRows);
-    } else {
-      renderInvitations(partner.invitations || []);
-      renderPartnerships(partner.partnerships || []);
-      renderLedger($('#partnerCommissionTable'), partner.commissions || [], 'supplier_name');
-    }
+    renderPolicy();
+    const summary = overview.summary || {};
+    const adminRows = adminOverview?.supplier_rebates || [];
+    $('#rebateSourceHours').textContent = hours(identity.role === 'admin' ? adminRows.reduce((sum, row) => sum + Number(row.source_card_hours || 0), 0) : summary.source_card_hours);
+    $('#rebateIssuedHours').textContent = hours(summary.issued_card_hours);
+    $('#rebatePendingHours').textContent = hours(identity.role === 'admin' ? adminRows.reduce((sum, row) => sum + Number(row.rebate_card_hours || 0), 0) : summary.pending_review_card_hours);
+    $('#rebateOrderCount').textContent = String(identity.role === 'admin' ? adminRows.length : summary.order_count || 0);
+    $('#supplierRebateLedger').hidden = !overview.eligible;
+    $('#adminRebateReview').hidden = identity.role !== 'admin';
+    $('#rebateIneligible').hidden = overview.eligible || identity.role === 'admin';
+    if (overview.eligible) renderSupplierRows(overview.rebates || []);
+    if (identity.role === 'admin') renderAdminRows(adminRows);
   }
 
   async function sync() {
@@ -204,16 +149,23 @@
       if (!me.authenticated) {
         identity = null; csrf = ''; content.hidden = true;
         $('#supplierCommissionIdentity').textContent = '尚未登录';
-        $('#supplierCommissionHint').textContent = '登录后可管理供应商计划或接受返佣邀请。';
+        $('#supplierCommissionHint').textContent = '登录后查看供应商返佣卡时账本。';
         gate.dataset.state = 'guest';
+        overview = { policy: { review_threshold_cents: 5000000, tiers: [
+          { minimum_cents: 100, maximum_cents: 100000, rate_bps: 100 },
+          { minimum_cents: 100001, maximum_cents: 1000000, rate_bps: 80 },
+          { minimum_cents: 1000001, maximum_cents: 3000000, rate_bps: 50 },
+          { minimum_cents: 3000001, maximum_cents: 5000000, rate_bps: 30 },
+          { minimum_cents: 5000001, maximum_cents: null, rate_bps: 20, review_required: true }
+        ] } };
+        renderPolicy();
         return;
       }
       identity = me.user; csrf = me.csrf_token || '';
-      await claimPendingReferral();
-      overview = await api('/api/supplier-referral/overview');
+      overview = await api('/api/supplier-rebate/overview');
       adminOverview = identity.role === 'admin' ? await api('/api/admin/overview') : null;
-      $('#supplierCommissionIdentity').textContent = `${identity.name} · ${identity.role === 'supplier' ? '供应商账户' : identity.role === 'admin' ? '平台管理账户' : '推广伙伴账户'}`;
-      $('#supplierCommissionHint').textContent = overview.supplier.enabled ? '供应商返佣计划已接入订单与结算账本。' : '可接受供应商邀请并分享专属推广链接。';
+      $('#supplierCommissionIdentity').textContent = `${identity.name} · ${identity.role === 'supplier' ? '供应商账户' : identity.role === 'admin' ? '平台管理账户' : '普通账户'}`;
+      $('#supplierCommissionHint').textContent = overview.eligible ? '成交返佣将以卡时资产批次进入你的算力库。' : identity.role === 'admin' ? '可审核单笔超过 5 万元的供应商卡时返佣。' : '返佣账本仅面向已认证供应商。';
       gate.dataset.state = 'ready'; content.hidden = false; render();
     } catch (error) {
       content.hidden = true;
@@ -223,73 +175,28 @@
     }
   }
 
-  async function claimPendingReferral() {
-    const urlCode = new URL(location.href).searchParams.get('supplier_ref');
-    if (urlCode) localStorage.setItem('kai-supplier-referral-pending', urlCode);
-    const pending = localStorage.getItem('kai-supplier-referral-pending');
-    if (!pending || !csrf) return;
-    try {
-      await api('/api/supplier-referral/claim', { method: 'POST', body: { referral_code: pending } });
-      localStorage.removeItem('kai-supplier-referral-pending');
-      const cleanUrl = new URL(location.href); cleanUrl.searchParams.delete('supplier_ref');
-      history.replaceState({}, '', cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
-    } catch (error) {
-      if (!/登录|状态/.test(error.message)) localStorage.removeItem('kai-supplier-referral-pending');
-    }
-  }
-
-  async function resolveInvitation(id, action) {
-    try {
-      await api(`/api/supplier-referral/invitations/${encodeURIComponent(id)}/${action}`, { method: 'POST', body: {} });
-      if (typeof window.toast === 'function') window.toast(action === 'accept' ? '返佣合作已接受' : '返佣邀请已拒绝');
-      await sync();
-    } catch (error) {
-      if (typeof window.toast === 'function') window.toast(error.message);
-    }
-  }
-
-  async function payAdminCommission(id) {
-    const input = $(`[data-payout-ref="${CSS.escape(id)}"]`);
-    const payoutRef = input?.value.trim() || '';
-    if (payoutRef.length < 6) {
-      if (typeof window.toast === 'function') window.toast('请输入有效的持牌机构支付流水号');
+  async function reviewRebate(id, decision) {
+    const input = $(`[data-review-reason="${CSS.escape(id)}"]`);
+    const reason = input?.value.trim() || '';
+    if (reason.length < 4) {
+      if (typeof window.toast === 'function') window.toast('请填写至少 4 个字的审核依据');
       input?.focus();
       return;
     }
     try {
-      await api(`/api/admin/supplier-commissions/${encodeURIComponent(id)}/mark-paid`, { method: 'POST', body: { payout_ref: payoutRef } });
-      if (typeof window.toast === 'function') window.toast('返佣支付流水已登记');
+      await api(`/api/admin/supplier-rebates/${encodeURIComponent(id)}/review`, { method: 'POST', body: { decision, reason } });
+      if (typeof window.toast === 'function') window.toast(decision === 'approve' ? '审核通过，返佣卡时已入账' : '返佣审核已拒绝');
       await sync();
     } catch (error) {
       if (typeof window.toast === 'function') window.toast(error.message);
     }
   }
 
-  $('#supplierProgramForm').addEventListener('submit', async event => {
-    event.preventDefault();
-    const status = $('#supplierProgramStatus'); status.textContent = '正在保存…';
-    try {
-      await api('/api/supplier-referral/program', { method: 'POST', body: {
-        commission_rate_percent: Number($('#supplierCommissionRate').value), status: $('#supplierCommissionStatus').value
-      }});
-      status.textContent = '计划已保存；新比例将用于之后发出的邀请。'; await sync();
-    } catch (error) { status.textContent = error.message; }
-  });
-
-  $('#supplierInvitationForm').addEventListener('submit', async event => {
-    event.preventDefault();
-    const status = $('#supplierInvitationStatus'); status.textContent = '正在发送邀请…';
-    try {
-      await api('/api/supplier-referral/invitations', { method: 'POST', body: { partner_account: $('#supplierPartnerAccount').value.trim() } });
-      $('#supplierPartnerAccount').value = ''; status.textContent = '邀请已发送，等待伙伴本人确认。'; await sync();
-    } catch (error) { status.textContent = error.message; }
-  });
-
   $('#supplierCommissionLogin').addEventListener('click', () => document.querySelector('.account')?.click());
-  navButton.addEventListener('click', () => sync());
-  const initialCode = new URL(location.href).searchParams.get('supplier_ref');
-  if (initialCode) {
-    try { localStorage.setItem('kai-supplier-referral-pending', initialCode); } catch (_) { /* unavailable storage */ }
+  navButton.addEventListener('click', sync);
+  if (new URL(location.href).searchParams.get('view') === 'supplierCommission') {
+    setTimeout(() => navButton.click(), 0);
+  } else {
+    sync();
   }
-  sync();
 })();

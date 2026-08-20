@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import base64
 import os
 import sqlite3
 import subprocess
@@ -104,7 +105,12 @@ def main() -> None:
                 "name": "首单 GPU 供应企业", "account": "supplier@example.com", "password": "Supplier2026",
             })
             application = supplier.post("/api/suppliers/applications", {
-                "enterprise_name": "首单 GPU 供应企业", "credit_code": "91310000MA1K123456", "agent_name": "授权经办人",
+                "enterprise_name": "首单 GPU 供应企业", "credit_code": "91310000MA1K123456",
+                "legal_representative": "企业法人", "agent_name": "授权经办人", "contact_phone": "13800138000",
+                "declaration_accepted": True, "license_file_name": "business-license.png",
+                "license_content_base64": base64.b64encode(
+                    b"\x89PNG\r\n\x1a\n" + b"KAI-LICENSE-TEST-EVIDENCE"
+                ).decode("ascii"),
             })["application"]
             admin.post(f"/api/admin/suppliers/{application['id']}/review", {
                 "decision": "certified", "reason": "企业主体、账户、开票、许可和资源归属核验通过",

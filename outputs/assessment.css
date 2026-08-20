@@ -43,6 +43,10 @@
 .enterprise-form-grid select option { color: #e6f3ff; background: #071a2e; }
 .enterprise-actions { display: flex; align-items: center; gap: 12px; margin-top: 17px; }
 .enterprise-error { color: #ff9e8d; font-size: 9px; }
+.enterprise-license-upload { grid-column: 1 / -1; padding: 12px; border: 1px dashed rgba(37,153,255,.45); }
+.enterprise-license-upload small { display: block; margin-top: 7px; color: #7895b0; }
+.enterprise-declaration { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; color: #9bb0c4; font-size: 11px; line-height: 1.5; }
+.enterprise-declaration input { margin-top: 2px; }
 .enterprise-status-card { padding: 18px; border: 1px solid rgba(88, 200, 255, .16); background: rgba(14, 55, 97, .16); }
 .enterprise-status-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .enterprise-status-top small { color: #7190ac; font-size: 11px; }

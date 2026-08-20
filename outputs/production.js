@@ -776,12 +776,38 @@
       }
       const error = document.querySelector('#enterpriseError');
       error.textContent = '';
+      const licenseFile = document.querySelector('#enterpriseLicenseFile')?.files?.[0];
+      if (!licenseFile) {
+        error.textContent = '请上传三证合一营业执照';
+        document.querySelector('#enterpriseLicenseFile')?.focus();
+        return;
+      }
+      const supportedLicense = ['application/pdf', 'image/jpeg', 'image/png'].includes(licenseFile.type) || /\.(pdf|jpe?g|png)$/i.test(licenseFile.name);
+      if (!supportedLicense || licenseFile.size > 5 * 1024 * 1024) {
+        error.textContent = '营业执照仅支持 PDF、JPG、PNG，且不能超过 5MB';
+        return;
+      }
+      if (!document.querySelector('#enterpriseDeclaration')?.checked) {
+        error.textContent = '请确认材料真实有效并同意平台核验';
+        return;
+      }
       setBusy(submit, true, '提交服务端审核…');
       try {
+        const licenseContent = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(new Error('营业执照读取失败，请重新选择文件'));
+          reader.readAsDataURL(licenseFile);
+        });
         const result = await api('/api/suppliers/applications', { method: 'POST', body: {
           enterprise_name: document.querySelector('#enterpriseName').value.trim(),
           credit_code: document.querySelector('#enterpriseCode').value.trim(),
-          agent_name: document.querySelector('#enterpriseAgent').value.trim()
+          legal_representative: document.querySelector('#enterpriseLegalRepresentative').value.trim(),
+          agent_name: document.querySelector('#enterpriseAgent').value.trim(),
+          contact_phone: document.querySelector('#enterpriseContactPhone').value.trim(),
+          declaration_accepted: true,
+          license_file_name: licenseFile.name,
+          license_content_base64: licenseContent
         }});
         document.querySelector('#supplierStatusText').textContent = '审核中';
         document.querySelector('#supplierStatusControl').value = 'reviewing';

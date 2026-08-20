@@ -46,7 +46,9 @@
         <label>本人已验收的成交订单<select id="rebateOrderSelect" required></select></label>
         <div class="rebate-order-preview" id="rebateOrderPreview"></div>
         <label>交易内容与交付说明<textarea id="rebateTransactionSummary" minlength="10" maxlength="1000" rows="5" required placeholder="请填写本次算力交易内容、资源交付和结算说明（至少 10 个字）"></textarea><small>平台只接受真实成交订单，争议或退款中的订单不能申报。</small></label>
+        <label class="rebate-evidence-upload">成交或结算凭证（选填）<input id="rebateEvidenceFile" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"><small id="rebateEvidenceState">可上传合同关键页、结算单或交付凭证，PDF、JPG、PNG，不超过 5MB。</small></label>
         <button class="primary rebate-submit-button" type="submit" id="rebateSubmitButton">提交并直接返佣</button>
+        <span class="rebate-submit-status" id="rebateSubmitStatus" role="status"></span>
       </form>
     </section>
 
@@ -113,6 +115,15 @@
     return payload;
   }
 
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('交易凭证读取失败，请重新选择文件'));
+      reader.readAsDataURL(file);
+    });
+  }
+
   function rangeLabel(tier) {
     if (tier.maximum_cents === null) return `超过 ${money((overview.policy || publicPolicy).review_threshold_cents)}`;
     if (tier.minimum_cents <= 100) return `¥1 – ${money(tier.maximum_cents)}`;
@@ -134,7 +145,7 @@
     $('#supplierRebateTotal').textContent = `${rows.length} 笔`;
     $('#supplierRebateTable').innerHTML = rows.length ? rows.map(row => `
       <article class="supplier-commission-row rebate-ledger-row">
-        <div><small>${safeText(row.order_no)}</small><b>${safeText(row.product_code || row.gpu)} · ${safeText(row.region)}</b></div>
+        <div><small>${safeText(row.order_no)}</small><b>${safeText(row.product_code || row.gpu)} · ${safeText(row.region)}</b>${row.evidence_download_url ? `<a class="rebate-evidence-link" href="${safeText(row.evidence_download_url)}" target="_blank" rel="noopener">查看交易凭证</a>` : ''}</div>
         <div><small>成交金额</small><b>${money(row.amount_cents)}</b></div>
         <div><small>成交卡时</small><b>${hours(row.source_card_hours)}</b></div>
         <div><small>比例</small><b>${Number(row.rebate_rate_percent).toFixed(1)}%</b></div>
@@ -149,6 +160,7 @@
       <article class="admin-rebate-card">
         <div class="admin-rebate-facts"><div><small>${safeText(row.order_no)}</small><b>${safeText(row.supplier_name)}</b><span>${safeText(row.supplier_account)}</span></div><dl><div><dt>成交金额</dt><dd>${money(row.amount_cents)}</dd></div><div><dt>成交卡时</dt><dd>${hours(row.source_card_hours)}</dd></div><div><dt>统一比例</dt><dd>${Number(row.rebate_rate_percent).toFixed(1)}%</dd></div><div><dt>拟返还</dt><dd>${hours(row.rebate_card_hours)} 卡时</dd></div></dl><span class="commission-state" data-state="${safeText(row.status)}">${safeText(statusLabels[row.status] || row.status)}</span></div>
         <p class="admin-rebate-summary"><b>供应商提交内容：</b>${safeText(row.transaction_summary || '未填写')}</p>
+        ${row.evidence_download_url ? `<a class="rebate-evidence-link" href="${safeText(row.evidence_download_url)}" target="_blank" rel="noopener">查看供应商成交或结算凭证 · ${safeText(row.evidence_file_name)}</a>` : '<p class="admin-rebate-blocked">供应商未上传附加凭证，请结合订单、交付和结算账本审核。</p>'}
         ${row.status === 'pending_review' ? `<div class="admin-rebate-action"><input data-review-reason="${safeText(row.id)}" placeholder="填写审核依据（至少 4 个字）"><button class="secondary" type="button" data-rebate-review="reject" data-id="${safeText(row.id)}">拒绝</button><button class="primary" type="button" data-rebate-review="approve" data-id="${safeText(row.id)}">审核通过并发卡时</button></div>` : '<p class="admin-rebate-blocked">该记录因争议、退款或追偿被冻结，不能直接发放。</p>'}
       </article>`).join('') : '<div class="supplier-commission-empty">当前没有超过 5 万元的待审核返佣。</div>';
     $('#adminRebateTable').querySelectorAll('[data-rebate-review]').forEach(button => {
@@ -160,12 +172,21 @@
     return (overview.eligible_orders || []).filter(order => order.submission_band === selectedBand);
   }
 
+  function rateForAmount(amountCents) {
+    const tiers = (overview.policy || publicPolicy).tiers || [];
+    return Number(tiers.find(tier => tier.maximum_cents === null || amountCents <= tier.maximum_cents)?.rate_bps || 0);
+  }
+
   function renderOrderPreview() {
     const order = matchingOrders().find(item => item.id === $('#rebateOrderSelect').value);
+    const rateBps = order ? rateForAmount(Number(order.amount_cents)) : 0;
+    const expectedHours = order ? Number(order.card_hours || 0) * rateBps / 10000 : 0;
     $('#rebateOrderPreview').innerHTML = order ? `
       <div><small>系统读取金额</small><b>${money(order.amount_cents)}</b></div>
       <div><small>成交卡时</small><b>${hours(order.card_hours)} ${safeText(order.unit)}</b></div>
-      <div><small>资源</small><b>${safeText(order.product_code || order.gpu)} · ${safeText(order.region)}</b></div>` : '<p>当前区间没有可申报订单。</p>';
+      <div><small>匹配返佣比例</small><b>${(rateBps / 100).toFixed(1)}%</b></div>
+      <div><small>预计返还卡时</small><b>${hours(expectedHours)} GPU 时</b></div>
+      <div><small>资源</small><b>${safeText(order.product_code || order.gpu)} · ${safeText(order.region)}</b></div>` : `<p>该通道已经开放，但当前没有${selectedBand === 'over_50000' ? '超过 5 万元' : '5 万元及以下'}且已完成验收的订单。返佣必须关联真实成交订单；订单验收后会自动出现在这里。</p>`;
     $('#rebateSubmitButton').disabled = !order || submitting;
   }
 
@@ -254,6 +275,9 @@
     event.preventDefault();
     const orderId = $('#rebateOrderSelect').value;
     const transactionSummary = $('#rebateTransactionSummary').value.trim();
+    const evidenceFile = $('#rebateEvidenceFile').files[0];
+    const submitStatus = $('#rebateSubmitStatus');
+    submitStatus.textContent = '';
     if (!orderId) {
       if (typeof window.toast === 'function') window.toast('当前区间没有可申报订单');
       return;
@@ -263,18 +287,33 @@
       $('#rebateTransactionSummary').focus();
       return;
     }
+    const supportedEvidence = !evidenceFile || ['application/pdf', 'image/jpeg', 'image/png'].includes(evidenceFile.type) || /\.(pdf|jpe?g|png)$/i.test(evidenceFile.name);
+    if (evidenceFile && (!supportedEvidence || evidenceFile.size > 5 * 1024 * 1024)) {
+      submitStatus.textContent = '成交或结算凭证仅支持 PDF、JPG、PNG，且不能超过 5MB。';
+      return;
+    }
     submitting = true;
     renderOrderPreview();
     try {
+      const evidenceContent = evidenceFile ? await readFileAsDataUrl(evidenceFile) : '';
       const result = await api('/api/supplier-rebate/submissions', {
-        method: 'POST', body: { order_id: orderId, submission_band: selectedBand, transaction_summary: transactionSummary }
+        method: 'POST', body: {
+          order_id: orderId, submission_band: selectedBand, transaction_summary: transactionSummary,
+          evidence_file_name: evidenceFile?.name || '', evidence_content_base64: evidenceContent
+        }
       });
       const message = result.rebate?.status === 'issued' ? '返佣卡时已进入供应商算力库' : '已提交平台审核';
       if (typeof window.toast === 'function') window.toast(message);
+      submitStatus.textContent = result.rebate?.status === 'issued'
+        ? `提交成功：${hours(result.rebate.rebate_card_hours)} GPU 时已进入供应商算力库。`
+        : `提交成功：预计 ${hours(result.rebate.rebate_card_hours)} GPU 时已进入平台审核。`;
       $('#rebateTransactionSummary').value = '';
+      $('#rebateEvidenceFile').value = '';
+      $('#rebateEvidenceState').textContent = '可上传合同关键页、结算单或交付凭证，PDF、JPG、PNG，不超过 5MB。';
       await sync();
     } catch (error) {
       if (typeof window.toast === 'function') window.toast(error.message);
+      submitStatus.textContent = error.message;
     } finally {
       submitting = false;
       renderOrderPreview();
@@ -323,6 +362,12 @@
     });
   });
   $('#rebateOrderSelect').addEventListener('change', renderOrderPreview);
+  $('#rebateEvidenceFile').addEventListener('change', event => {
+    const file = event.target.files[0];
+    $('#rebateEvidenceState').textContent = file
+      ? `${file.name} · ${(file.size / 1024).toFixed(file.size >= 102400 ? 0 : 1)} KB`
+      : '可上传合同关键页、结算单或交付凭证，PDF、JPG、PNG，不超过 5MB。';
+  });
   $('#rebateSubmissionForm').addEventListener('submit', submitRebate);
   $('#rebateGoCertification').addEventListener('click', () => {
     document.querySelector('.nav-item[data-view="supplier"]')?.click();

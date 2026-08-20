@@ -53,7 +53,7 @@
 .rebate-form-heading b { margin-top: 3px; font-size: 18px; }
 .rebate-submission-form label { display: block; margin-top: 14px; font-weight: 700; }
 .rebate-submission-form label:first-of-type { margin-top: 0; }
-.rebate-submission-form select,.rebate-submission-form textarea { display: block; width: 100%; margin-top: 7px; padding: 11px 12px; border: 1px solid var(--line, #d9e4dc); border-radius: 11px; background: var(--surface, #f8faf9); color: var(--text, #13251a); font: inherit; box-sizing: border-box; }
+.rebate-submission-form select,.rebate-submission-form textarea,.rebate-submission-form input[type="file"] { display: block; width: 100%; margin-top: 7px; padding: 11px 12px; border: 1px solid var(--line, #d9e4dc); border-radius: 11px; background: var(--surface, #f8faf9); color: var(--text, #13251a); font: inherit; box-sizing: border-box; }
 .rebate-submission-form textarea { resize: vertical; line-height: 1.6; }
 .rebate-submission-form label > small { display: block; margin-top: 6px; color: var(--muted, #607066); font-size: 12px; font-weight: 400; }
 .rebate-order-preview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
@@ -62,6 +62,9 @@
 .rebate-order-preview small { color: var(--muted, #607066); font-size: 11px; }
 .rebate-order-preview b { margin-top: 4px; font-size: 13px; }
 .rebate-order-preview p { grid-column: 1 / -1; margin: 0; padding: 16px; border-radius: 11px; background: #fbf8ef; color: #765c0b; text-align: center; }
+.rebate-evidence-upload { padding: 13px; border: 1px dashed var(--line, #d9e4dc); border-radius: 12px; background: rgba(64,119,82,.04); }
+.rebate-submit-status { display: block; margin-top: 10px; color: var(--muted, #607066); font-size: 13px; }
+.rebate-evidence-link { display: inline-flex; margin-top: 7px; color: #176b49; font-size: 12px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .rebate-submit-button { width: 100%; margin-top: 16px; min-height: 46px; }
 .rebate-submit-button:disabled { cursor: not-allowed; opacity: .5; }
 .supplier-commission-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 22px 0 28px; }

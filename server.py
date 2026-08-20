@@ -36,13 +36,15 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parent
 STATIC_ROOT = (ROOT / "outputs").resolve()
 DB_PATH = Path(os.environ.get("KAI_DB_PATH", str(ROOT / "data" / "kai.db"))).resolve()
+EVIDENCE_ROOT = Path(os.environ.get("KAI_EVIDENCE_ROOT", str(DB_PATH.parent / "private-evidence"))).resolve()
 HOST = os.environ.get("KAI_HOST", "127.0.0.1")
 PORT = int(os.environ.get("KAI_PORT", "8081"))
 ALLOW_DEMO = os.environ.get("KAI_ALLOW_DEMO", "true").lower() == "true"
 SEED_CATALOG = os.environ.get("KAI_SEED_CATALOG", "true").lower() == "true"
 COOKIE_SECURE = os.environ.get("KAI_COOKIE_SECURE", "false").lower() == "true"
 SESSION_HOURS = int(os.environ.get("KAI_SESSION_HOURS", "12"))
-MAX_BODY = 1_048_576
+MAX_BODY = 8_388_608
+MAX_EVIDENCE_BYTES = 5_242_880
 PBKDF2_ROUNDS = 310_000
 MOCK_SECRET = os.environ.get("KAI_PAYMENT_MOCK_SECRET", "kai-local-mock-provider-change-me")
 REQUIRE_SMS = os.environ.get("KAI_REQUIRE_SMS", "false").lower() == "true"
@@ -724,6 +726,55 @@ def clean_text(value: object, field: str, minimum: int = 1, maximum: int = 160) 
     return text
 
 
+def decode_private_evidence(
+    encoded: object,
+    original_name: object,
+    field: str,
+    required: bool = True,
+) -> dict | None:
+    raw_value = str(encoded or "").strip()
+    if not raw_value:
+        if required:
+            raise ApiError(422, f"请上传{field}", "evidence_required")
+        return None
+    if "," in raw_value and raw_value.lower().startswith("data:"):
+        raw_value = raw_value.split(",", 1)[1]
+    try:
+        content = base64.b64decode(raw_value, validate=True)
+    except (ValueError, TypeError):
+        raise ApiError(422, f"{field}文件内容无效", "invalid_evidence_encoding")
+    if not content or len(content) > MAX_EVIDENCE_BYTES:
+        raise ApiError(413 if len(content) > MAX_EVIDENCE_BYTES else 422, f"{field}文件应小于 5MB", "evidence_too_large")
+    if content.startswith(b"%PDF-"):
+        mime, extension = "application/pdf", ".pdf"
+    elif content.startswith(b"\x89PNG\r\n\x1a\n"):
+        mime, extension = "image/png", ".png"
+    elif content.startswith(b"\xff\xd8\xff"):
+        mime, extension = "image/jpeg", ".jpg"
+    else:
+        raise ApiError(422, f"{field}仅支持 PDF、JPG 或 PNG", "unsupported_evidence_type")
+    safe_name = str(original_name or f"{field}{extension}").replace("\\", "/").split("/")[-1].strip()
+    safe_name = re.sub(r"[^0-9A-Za-z._\-\u4e00-\u9fff]", "_", safe_name)[:120] or f"{field}{extension}"
+    return {
+        "content": content,
+        "file_name": safe_name,
+        "mime": mime,
+        "size": len(content),
+        "sha256": hashlib.sha256(content).hexdigest(),
+        "extension": extension,
+    }
+
+
+def store_private_evidence(evidence: dict, category: str) -> str:
+    target_dir = (EVIDENCE_ROOT / category).resolve()
+    if EVIDENCE_ROOT != target_dir and EVIDENCE_ROOT not in target_dir.parents:
+        raise ApiError(500, "材料存储目录异常", "evidence_storage_error")
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target = target_dir / f"{secrets.token_hex(24)}{evidence['extension']}"
+    target.write_bytes(evidence["content"])
+    return str(target)
+
+
 def normalize_iso_time(value: object, field: str) -> str:
     text = clean_text(value, field, 10, 40)
     try:
@@ -1132,6 +1183,15 @@ def initialize_database() -> None:
         add_column_if_missing(connection, "supplier_applications", "resource_proof_verified", "INTEGER NOT NULL DEFAULT 0")
         add_column_if_missing(connection, "supplier_applications", "license_verified", "INTEGER NOT NULL DEFAULT 0")
         add_column_if_missing(connection, "supplier_applications", "next_review_at", "TEXT")
+        add_column_if_missing(connection, "supplier_applications", "legal_representative", "TEXT")
+        add_column_if_missing(connection, "supplier_applications", "contact_phone", "TEXT")
+        add_column_if_missing(connection, "supplier_applications", "license_file_name", "TEXT")
+        add_column_if_missing(connection, "supplier_applications", "license_mime", "TEXT")
+        add_column_if_missing(connection, "supplier_applications", "license_size", "INTEGER")
+        add_column_if_missing(connection, "supplier_applications", "license_sha256", "TEXT")
+        add_column_if_missing(connection, "supplier_applications", "license_storage_path", "TEXT")
+        add_column_if_missing(connection, "supplier_applications", "subject_verified", "INTEGER NOT NULL DEFAULT 0")
+        add_column_if_missing(connection, "supplier_applications", "agent_verified", "INTEGER NOT NULL DEFAULT 0")
         add_column_if_missing(connection, "resource_intakes", "provider", "TEXT")
         add_column_if_missing(connection, "resource_intakes", "verification_summary", "TEXT")
         add_column_if_missing(connection, "resource_intakes", "reviewer_user_id", "TEXT")
@@ -1160,6 +1220,11 @@ def initialize_database() -> None:
         add_column_if_missing(connection, "supplier_card_hour_rebates", "submission_band", "TEXT")
         add_column_if_missing(connection, "supplier_card_hour_rebates", "transaction_summary", "TEXT")
         add_column_if_missing(connection, "supplier_card_hour_rebates", "submitted_at", "TEXT")
+        add_column_if_missing(connection, "supplier_card_hour_rebates", "evidence_file_name", "TEXT")
+        add_column_if_missing(connection, "supplier_card_hour_rebates", "evidence_mime", "TEXT")
+        add_column_if_missing(connection, "supplier_card_hour_rebates", "evidence_size", "INTEGER")
+        add_column_if_missing(connection, "supplier_card_hour_rebates", "evidence_sha256", "TEXT")
+        add_column_if_missing(connection, "supplier_card_hour_rebates", "evidence_storage_path", "TEXT")
         add_column_if_missing(connection, "allocations", "kind", "TEXT NOT NULL DEFAULT 'gpu'")
         add_column_if_missing(connection, "allocations", "product_code", "TEXT")
         add_column_if_missing(connection, "allocations", "provider", "TEXT")
@@ -1308,12 +1373,29 @@ def supplier_rebate_policy() -> dict:
     }
 
 
+def supplier_application_dict(row: sqlite3.Row, admin: bool = False) -> dict:
+    item = dict(row)
+    item.pop("license_storage_path", None)
+    item["license_uploaded"] = bool(item.get("license_file_name"))
+    item["license_size"] = int(item.get("license_size") or 0)
+    item["license_verified"] = bool(item.get("license_verified"))
+    item["subject_verified"] = bool(item.get("subject_verified"))
+    item["agent_verified"] = bool(item.get("agent_verified"))
+    if admin and item["license_uploaded"]:
+        item["license_download_url"] = f"/api/admin/supplier-applications/{item['id']}/license"
+    return item
+
+
 def supplier_rebate_dict(row: sqlite3.Row) -> dict:
     item = dict(row)
+    item.pop("evidence_storage_path", None)
     item["amount_cny"] = item["amount_cents"] / 100
     item["source_card_hours"] = item["source_card_hours_micros"] / CARD_HOUR_MICROS
     item["rebate_card_hours"] = item["rebate_card_hours_micros"] / CARD_HOUR_MICROS
     item["rebate_rate_percent"] = item["rebate_rate_bps"] / 100
+    item["evidence_uploaded"] = bool(item.get("evidence_file_name"))
+    if item["evidence_uploaded"]:
+        item["evidence_download_url"] = f"/api/supplier-rebates/{item['id']}/evidence"
     return item
 
 
@@ -1804,6 +1886,12 @@ class KaiHandler(BaseHTTPRequestHandler):
                 return self.get_app_release_readiness()
             if path == "/api/public/operator":
                 return self.get_public_operator()
+            supplier_license_match = re.fullmatch(r"/api/admin/supplier-applications/([^/]+)/license", path)
+            if supplier_license_match:
+                return self.download_supplier_license(supplier_license_match.group(1))
+            rebate_evidence_match = re.fullmatch(r"/api/supplier-rebates/([^/]+)/evidence", path)
+            if rebate_evidence_match:
+                return self.download_supplier_rebate_evidence(rebate_evidence_match.group(1))
             return self.serve_static(path)
         except ApiError as error:
             self.api_error(error)
@@ -1958,6 +2046,49 @@ class KaiHandler(BaseHTTPRequestHandler):
             self.send_header("Set-Cookie", cookie)
         self.end_headers()
         self.wfile.write(body)
+
+    def private_file_response(self, storage_path: str, mime: str, download_name: str) -> None:
+        candidate = Path(storage_path or "").resolve()
+        if EVIDENCE_ROOT != candidate and EVIDENCE_ROOT not in candidate.parents:
+            raise ApiError(404, "认证材料不存在", "evidence_not_found")
+        if not candidate.is_file() or candidate.stat().st_size > MAX_EVIDENCE_BYTES:
+            raise ApiError(404, "认证材料不存在", "evidence_not_found")
+        body = candidate.read_bytes()
+        extension = candidate.suffix.lower() if candidate.suffix.lower() in (".pdf", ".png", ".jpg", ".jpeg") else ""
+        disposition_name = f"kai-private-evidence{extension}"
+        self.send_response(200)
+        self.send_header("Content-Type", mime or "application/octet-stream")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Content-Disposition", f'inline; filename="{disposition_name}"')
+        self.send_header("Cache-Control", "private, no-store")
+        self.send_header("X-KAI-Evidence-Name", base64url(str(download_name or disposition_name).encode("utf-8")))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def download_supplier_license(self, application_id: str) -> None:
+        session = self.session()
+        require_role(session, "admin")
+        with db_connect() as connection:
+            application = connection.execute(
+                "SELECT license_storage_path,license_mime,license_file_name FROM supplier_applications WHERE id=?",
+                (application_id,),
+            ).fetchone()
+        if not application or not application["license_storage_path"]:
+            raise ApiError(404, "营业执照材料不存在", "license_not_found")
+        self.private_file_response(application["license_storage_path"], application["license_mime"], application["license_file_name"])
+
+    def download_supplier_rebate_evidence(self, rebate_id: str) -> None:
+        session = self.session()
+        with db_connect() as connection:
+            rebate = connection.execute(
+                "SELECT supplier_user_id,evidence_storage_path,evidence_mime,evidence_file_name FROM supplier_card_hour_rebates WHERE id=?",
+                (rebate_id,),
+            ).fetchone()
+        if not rebate or not rebate["evidence_storage_path"]:
+            raise ApiError(404, "返佣交易凭证不存在", "rebate_evidence_not_found")
+        if session["role"] != "admin" and session["user_id"] != rebate["supplier_user_id"]:
+            raise ApiError(403, "当前账户无权查看该材料", "permission_denied")
+        self.private_file_response(rebate["evidence_storage_path"], rebate["evidence_mime"], rebate["evidence_file_name"])
 
     def api_error(self, error: ApiError) -> None:
         self.json_response(error.status, {"ok": False, "error": {"code": error.code, "message": error.message}})
@@ -2653,7 +2784,10 @@ class KaiHandler(BaseHTTPRequestHandler):
         supplier_id = session["user_id"]
         with db_connect() as connection:
             applications = connection.execute(
-                "SELECT id,enterprise_name,credit_code,agent_name,status,review_reason,reviewed_at,next_review_at,created_at,updated_at FROM supplier_applications WHERE user_id=? ORDER BY created_at DESC",
+                """SELECT id,enterprise_name,credit_code,legal_representative,agent_name,contact_phone,status,
+                          review_reason,reviewed_at,next_review_at,license_file_name,license_mime,license_size,
+                          license_sha256,license_verified,subject_verified,agent_verified,created_at,updated_at
+                   FROM supplier_applications WHERE user_id=? ORDER BY created_at DESC""",
                 (supplier_id,),
             ).fetchall()
             intakes = connection.execute(
@@ -2685,7 +2819,7 @@ class KaiHandler(BaseHTTPRequestHandler):
         self.json_response(200, {
             "ok": True,
             "supplier": {"id": supplier_id, "role": session["role"], "enterprise_status": session["enterprise_status"]},
-            "applications": [dict(row) for row in applications],
+            "applications": [supplier_application_dict(row) for row in applications],
             "intakes": [dict(row) for row in intakes],
             "listings": listing_rows,
             "orders": [order_dict(row) for row in orders],
@@ -2771,6 +2905,10 @@ class KaiHandler(BaseHTTPRequestHandler):
         if submission_band not in ("up_to_50000", "over_50000"):
             raise ApiError(422, "请选择正确的成交金额区间", "invalid_rebate_band")
         transaction_summary = clean_text(data.get("transaction_summary"), "交易内容", 10, 1000)
+        evidence = decode_private_evidence(
+            data.get("evidence_content_base64"), data.get("evidence_file_name"), "成交或结算凭证", required=False,
+        )
+        evidence_path = store_private_evidence(evidence, "supplier-rebates") if evidence else None
         submitted_at = now_iso()
         with db_connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -2789,6 +2927,8 @@ class KaiHandler(BaseHTTPRequestHandler):
                     if existing["submission_band"] and existing["submission_band"] != submission_band:
                         raise ApiError(409, "该订单已经按另一金额区间提交", "rebate_submission_conflict")
                     connection.execute("COMMIT")
+                    if evidence_path:
+                        Path(evidence_path).unlink(missing_ok=True)
                     return self.json_response(200, {
                         "ok": True, "rebate": supplier_rebate_dict(existing),
                         "idempotent_replay": True,
@@ -2812,10 +2952,22 @@ class KaiHandler(BaseHTTPRequestHandler):
                 )
                 if not rebate:
                     raise ApiError(409, "该订单无法换算返佣卡时", "rebate_conversion_unavailable")
+                if evidence:
+                    connection.execute(
+                        """UPDATE supplier_card_hour_rebates SET evidence_file_name=?,evidence_mime=?,evidence_size=?,
+                           evidence_sha256=?,evidence_storage_path=?,updated_at=? WHERE id=?""",
+                        (evidence["file_name"], evidence["mime"], evidence["size"], evidence["sha256"],
+                         evidence_path, submitted_at, rebate["id"]),
+                    )
+                    audit(connection, session["user_id"], "supplier_card_hour_rebate", rebate["id"],
+                          "supplier_rebate.evidence_attached", {"sha256": evidence["sha256"], "size": evidence["size"]})
+                    rebate = connection.execute("SELECT * FROM supplier_card_hour_rebates WHERE id=?", (rebate["id"],)).fetchone()
                 connection.execute("COMMIT")
             except Exception:
                 if connection.in_transaction:
                     connection.execute("ROLLBACK")
+                if evidence_path:
+                    Path(evidence_path).unlink(missing_ok=True)
                 raise
         self.json_response(201, {"ok": True, "rebate": supplier_rebate_dict(rebate)})
 
@@ -3061,7 +3213,7 @@ class KaiHandler(BaseHTTPRequestHandler):
             }
         self.json_response(200, {
             "ok": True, "counts": counts, "readiness": integration_readiness(),
-            "applications": [dict(row) for row in applications], "intakes": [dict(row) for row in intakes],
+            "applications": [supplier_application_dict(row, admin=True) for row in applications], "intakes": [dict(row) for row in intakes],
             "listings": [dict(row) for row in listings], "disputes": [dict(row) for row in disputes],
             "refunds": [dict(row) for row in refunds], "settlements": [dict(row) for row in settlements],
             "supplier_rebates": [supplier_rebate_dict(row) for row in supplier_rebates],
@@ -3082,9 +3234,9 @@ class KaiHandler(BaseHTTPRequestHandler):
             "invoice_verified": bool(data.get("invoice_verified")),
             "resource_proof_verified": bool(data.get("resource_proof_verified")),
             "license_verified": bool(data.get("license_verified")),
+            "subject_verified": bool(data.get("subject_verified", data.get("bank_account_verified"))),
+            "agent_verified": bool(data.get("agent_verified", data.get("resource_proof_verified"))),
         }
-        if decision == "certified" and not all(checks.values()):
-            raise ApiError(422, "认证通过前必须完成对公账户、开票、资源证明和许可核验", "supplier_checks_incomplete")
         reviewed = now_iso()
         next_review = (datetime.now(timezone.utc) + timedelta(days=180)).replace(microsecond=0).isoformat() if decision == "certified" else None
         with db_connect() as connection:
@@ -3093,12 +3245,18 @@ class KaiHandler(BaseHTTPRequestHandler):
                 application = connection.execute("SELECT * FROM supplier_applications WHERE id=?", (application_id,)).fetchone()
                 if not application:
                     raise ApiError(404, "供应商申请不存在")
+                if decision == "certified" and (
+                    not application["license_storage_path"]
+                    or not all(checks[key] for key in ("license_verified", "subject_verified", "agent_verified"))
+                ):
+                    raise ApiError(422, "认证通过前必须查验营业执照、企业主体和授权经办人", "supplier_checks_incomplete")
                 connection.execute(
                     """UPDATE supplier_applications SET status=?,reviewer_user_id=?,review_reason=?,reviewed_at=?,
-                       bank_account_verified=?,invoice_verified=?,resource_proof_verified=?,license_verified=?,next_review_at=?,review_due_at=?,updated_at=? WHERE id=?""",
+                       bank_account_verified=?,invoice_verified=?,resource_proof_verified=?,license_verified=?,
+                       subject_verified=?,agent_verified=?,next_review_at=?,review_due_at=?,updated_at=? WHERE id=?""",
                     (decision, session["user_id"], reason, reviewed, int(checks["bank_account_verified"]),
-                     int(checks["invoice_verified"]), int(checks["resource_proof_verified"]), int(checks["license_verified"]),
-                     next_review, next_review, reviewed, application_id),
+                      int(checks["invoice_verified"]), int(checks["resource_proof_verified"]), int(checks["license_verified"]),
+                      int(checks["subject_verified"]), int(checks["agent_verified"]), next_review, next_review, reviewed, application_id),
                 )
                 user_role = "supplier" if decision in ("certified", "restricted") else "supplier_pending"
                 enterprise_status = decision if decision != "needs_changes" else "unverified"
@@ -3247,28 +3405,71 @@ class KaiHandler(BaseHTTPRequestHandler):
         session = self.session(csrf=True)
         data = self.read_json()
         enterprise = clean_text(data.get("enterprise_name"), "企业名称", 2, 120)
-        code = clean_text(data.get("credit_code"), "统一社会信用代码", 15, 24).upper()
+        code = clean_text(data.get("credit_code"), "统一社会信用代码", 18, 18).upper()
+        if not re.fullmatch(r"[0-9A-HJ-NPQRTUWXY]{18}", code):
+            raise ApiError(422, "统一社会信用代码应为 18 位数字或大写字母", "invalid_credit_code")
         agent = clean_text(data.get("agent_name"), "授权经办人", 2, 60)
+        legal_representative = clean_text(data.get("legal_representative") or agent, "法定代表人", 2, 60)
+        contact_phone = clean_text(data.get("contact_phone") or session["account"], "联系电话", 5, 60)
+        declaration = bool(data.get("declaration_accepted"))
+        if not declaration:
+            raise ApiError(422, "请确认营业执照真实有效并同意平台核验", "supplier_declaration_required")
+        license_evidence = decode_private_evidence(
+            data.get("license_content_base64"), data.get("license_file_name"), "三证合一营业执照",
+        )
         created = now_iso()
         application_id = uid("sup")
+        stored_path = store_private_evidence(license_evidence, "supplier-licenses")
+        previous_path = None
         with db_connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             try:
                 existing = connection.execute("SELECT * FROM supplier_applications WHERE user_id=? ORDER BY created_at DESC LIMIT 1", (session["user_id"],)).fetchone()
-                if existing and existing["status"] in ("reviewing", "certified"):
+                if existing and existing["status"] == "certified":
                     connection.execute("COMMIT")
-                    return self.json_response(200, {"ok": True, "application": dict(existing)})
-                connection.execute(
-                    "INSERT INTO supplier_applications(id,user_id,enterprise_name,credit_code,agent_name,status,created_at,updated_at) VALUES(?,?,?,?,?,'reviewing',?,?)",
-                    (application_id, session["user_id"], enterprise, code, agent, created, created),
-                )
+                    Path(stored_path).unlink(missing_ok=True)
+                    return self.json_response(200, {"ok": True, "application": supplier_application_dict(existing)})
+                if existing and existing["status"] == "reviewing":
+                    application_id = existing["id"]
+                    previous_path = existing["license_storage_path"]
+                    connection.execute(
+                        """UPDATE supplier_applications SET enterprise_name=?,credit_code=?,legal_representative=?,
+                           agent_name=?,contact_phone=?,license_file_name=?,license_mime=?,license_size=?,license_sha256=?,
+                           license_storage_path=?,license_verified=0,subject_verified=0,agent_verified=0,
+                           review_reason=NULL,updated_at=? WHERE id=?""",
+                        (enterprise, code, legal_representative, agent, contact_phone, license_evidence["file_name"],
+                         license_evidence["mime"], license_evidence["size"], license_evidence["sha256"],
+                         stored_path, created, application_id),
+                    )
+                else:
+                    connection.execute(
+                        """INSERT INTO supplier_applications(
+                           id,user_id,enterprise_name,credit_code,legal_representative,agent_name,contact_phone,status,
+                           license_file_name,license_mime,license_size,license_sha256,license_storage_path,created_at,updated_at
+                           ) VALUES(?,?,?,?,?,?,?,'reviewing',?,?,?,?,?,?,?)""",
+                        (application_id, session["user_id"], enterprise, code, legal_representative, agent, contact_phone,
+                         license_evidence["file_name"], license_evidence["mime"], license_evidence["size"],
+                         license_evidence["sha256"], stored_path, created, created),
+                    )
                 connection.execute("UPDATE users SET role='supplier_pending',enterprise_status='reviewing',updated_at=? WHERE id=?", (created, session["user_id"]))
-                audit(connection, session["user_id"], "supplier_application", application_id, "supplier.submitted", {"enterprise_name": enterprise})
+                audit(connection, session["user_id"], "supplier_application", application_id, "supplier.submitted", {
+                    "enterprise_name": enterprise, "credit_code": code, "legal_representative": legal_representative,
+                    "license_sha256": license_evidence["sha256"], "license_size": license_evidence["size"],
+                })
                 connection.execute("COMMIT")
             except Exception:
                 connection.execute("ROLLBACK")
+                Path(stored_path).unlink(missing_ok=True)
                 raise
-        self.json_response(201, {"ok": True, "application": {"id": application_id, "status": "reviewing", "enterprise_name": enterprise}})
+            application = connection.execute("SELECT * FROM supplier_applications WHERE id=?", (application_id,)).fetchone()
+        if previous_path and previous_path != stored_path:
+            try:
+                old_candidate = Path(previous_path).resolve()
+                if EVIDENCE_ROOT in old_candidate.parents:
+                    old_candidate.unlink(missing_ok=True)
+            except OSError:
+                pass
+        self.json_response(201, {"ok": True, "application": supplier_application_dict(application)})
 
     def create_resource_intake(self) -> None:
         session = self.session(csrf=True)

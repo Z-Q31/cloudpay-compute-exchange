@@ -55,13 +55,17 @@
           <div class="enterprise-form-grid">
             <label>企业全称<input id="enterpriseName" autocomplete="organization" placeholder="营业执照登记名称"></label>
             <label>统一社会信用代码<input id="enterpriseCode" autocomplete="off" placeholder="18位统一社会信用代码"></label>
+            <label>法定代表人<input id="enterpriseLegalRepresentative" autocomplete="name" placeholder="营业执照登记姓名"></label>
             <label>授权经办人<input id="enterpriseAgent" autocomplete="name" placeholder="姓名，仅用于企业认证"></label>
+            <label>联系电话<input id="enterpriseContactPhone" autocomplete="tel" placeholder="便于平台核验联系"></label>
+            <label class="enterprise-license-upload">三证合一营业执照<input id="enterpriseLicenseFile" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"><small>PDF、JPG 或 PNG，不超过 5MB，仅用于平台认证审核</small></label>
             <label>授权文件<select id="enterpriseAuthorization"><option value="pending">待提交或待核验</option><option value="verified">授权关系已核验</option><option value="missing">材料缺失</option></select></label>
             <label>对公结算账户<select id="enterpriseBank"><option value="pending">待核验</option><option value="verified">账户名称与企业一致</option><option value="changed">账户发生变化，立即复核</option></select></label>
             <label>开票资料<select id="enterpriseInvoice"><option value="pending">待核验</option><option value="verified">开票资料已核验</option><option value="missing">资料缺失</option></select></label>
             <label>相关许可<select id="enterpriseLicense"><option value="pending">按适用规则待核验</option><option value="verified">适用许可已核验</option><option value="changed">许可发生变化，立即复核</option></select></label>
             <label>资源归属证明<select id="enterpriseOwnership"><option value="pending">待核验</option><option value="verified">权属、托管或云账号证明已核验</option><option value="changed">资源证明发生变化，立即复核</option></select></label>
           </div>
+          <label class="enterprise-declaration"><input id="enterpriseDeclaration" type="checkbox">我确认提交的企业主体和营业执照真实有效，并授权平台核验。</label>
           <div class="enterprise-actions"><button class="primary" id="submitEnterprise" type="button">提交企业认证</button><span class="enterprise-error" id="enterpriseError" role="status"></span></div>
         </div>
         <aside class="enterprise-status-card">
@@ -750,7 +754,7 @@
   $('#enterpriseName').addEventListener('input', () => { $('#assessSupplier').value = $('#enterpriseName').value; });
   $('#submitEnterprise').addEventListener('click', () => {
     const fields = {
-      enterpriseName: '企业名称', enterpriseCode: '统一社会信用代码', enterpriseAgent: '授权经办人'
+      enterpriseName: '企业名称', enterpriseCode: '统一社会信用代码', enterpriseLegalRepresentative: '法定代表人', enterpriseAgent: '授权经办人', enterpriseContactPhone: '联系电话'
     };
     const missing = Object.entries(fields).find(([id]) => !$(`#${id}`).value.trim());
     if (missing) {

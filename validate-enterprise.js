@@ -15,9 +15,11 @@ const baseUrl = process.env.KAI_BASE_URL || 'http://127.0.0.1:4174/';
 
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
   if (await page.locator('#productionState[data-state="online"]').count()) {
-    await page.locator('.account').click();
-    await page.locator('#demoLogin').click();
-    await page.waitForFunction(() => document.querySelector('.account b')?.textContent.includes('KAI 企业采购方'));
+    await page.evaluate(async () => {
+      const response = await fetch('/api/auth/demo-login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      if (!response.ok) throw new Error(`demo login ${response.status}`);
+    });
+    await page.reload({ waitUntil: 'networkidle' });
   }
   await page.locator('[data-view="assessment"]').click();
   await page.waitForSelector('#assessmentView.active');
@@ -27,7 +29,11 @@ const baseUrl = process.env.KAI_BASE_URL || 'http://127.0.0.1:4174/';
 
   await page.locator('#enterpriseName').fill('上海开艾算力科技有限公司');
   await page.locator('#enterpriseCode').fill('91310000MA1K123456');
+  await page.locator('#enterpriseLegalRepresentative').fill('张法人');
   await page.locator('#enterpriseAgent').fill('张经办');
+  await page.locator('#enterpriseContactPhone').fill('13800138000');
+  await page.locator('#enterpriseLicenseFile').setInputFiles({ name: 'three-in-one-license.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgpLQUktTElDRU5TRS1VSQ==', 'base64') });
+  await page.locator('#enterpriseDeclaration').check();
   for (const id of ['enterpriseAuthorization', 'enterpriseBank', 'enterpriseInvoice', 'enterpriseLicense', 'enterpriseOwnership']) {
     await page.locator(`#${id}`).selectOption('verified');
   }

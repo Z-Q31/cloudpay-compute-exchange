@@ -128,8 +128,9 @@
     readiness.querySelector('span').textContent = blockers.length ? `尚缺：${blockers.join('、')}。业务审核功能可以先使用。` : '可以进入小范围首单验证。';
 
     const suppliers = (state.applications || []).map(item => `
-      <article class="operations-card"><div><h3>${escapeHtml(item.enterprise_name)}</h3><p>${escapeHtml(item.name)} · ${escapeHtml(item.account)} · 信用代码 ${escapeHtml(item.credit_code)}</p><small>提交于 ${escapeHtml(item.created_at.replace('T', ' ').slice(0, 16))}</small></div>
-      <div class="operations-card-actions"><input data-reason="${escapeHtml(item.id)}" value="主体、经办人、对公账户、开票资料、许可及资源归属证明核验通过" aria-label="审核理由"><button data-action="supplier-needs" data-id="${escapeHtml(item.id)}" data-danger>退回补充</button><button data-action="supplier-certify" data-id="${escapeHtml(item.id)}" data-primary>认证通过</button></div></article>`).join('');
+      <article class="operations-card operations-supplier-certification"><div><h3>${escapeHtml(item.enterprise_name)}</h3><p>${escapeHtml(item.name)} · ${escapeHtml(item.account)} · 信用代码 ${escapeHtml(item.credit_code)}</p><p>法定代表人 ${escapeHtml(item.legal_representative || '—')} · 经办人 ${escapeHtml(item.agent_name)} · ${escapeHtml(item.contact_phone || '未留联系电话')}</p><small>提交于 ${escapeHtml(item.created_at.replace('T', ' ').slice(0, 16))}</small>
+      ${item.license_download_url ? `<a class="operations-evidence-link" href="${escapeHtml(item.license_download_url)}" target="_blank" rel="noopener">查看三证合一营业执照 · ${escapeHtml(item.license_file_name)} · ${(Number(item.license_size || 0) / 1024).toFixed(1)} KB</a>` : '<strong class="operations-evidence-missing">未提交营业执照，不能认证通过</strong>'}</div>
+      <div class="operations-card-actions"><div class="operations-certification-checks"><label><input type="checkbox" data-supplier-check="license" data-id="${escapeHtml(item.id)}">营业执照原件清晰有效</label><label><input type="checkbox" data-supplier-check="subject" data-id="${escapeHtml(item.id)}">企业名称与信用代码一致</label><label><input type="checkbox" data-supplier-check="agent" data-id="${escapeHtml(item.id)}">法定代表人与经办人已核验</label></div><input data-reason="${escapeHtml(item.id)}" value="营业执照、企业主体及授权经办人核验通过" aria-label="审核理由"><button data-action="supplier-needs" data-id="${escapeHtml(item.id)}" data-danger>退回补充</button><button data-action="supplier-certify" data-id="${escapeHtml(item.id)}" data-primary>认证通过</button></div></article>`).join('');
     document.querySelector('[data-operation-panel="suppliers"]').innerHTML = panel('企业供应商认证', '认证通过后每六个月复核；资料变化应即时复核。', suppliers || empty('当前没有待审核企业供应商'));
 
     const resources = [
@@ -163,7 +164,9 @@
       let path = ''; let body = {};
       if (action.startsWith('supplier-')) {
         path = `/api/admin/suppliers/${encodeURIComponent(id)}/review`;
-        body = { decision: action === 'supplier-certify' ? 'certified' : 'needs_changes', reason: document.querySelector(`[data-reason="${CSS.escape(id)}"]`)?.value || '请补充认证材料', bank_account_verified: action === 'supplier-certify', invoice_verified: action === 'supplier-certify', resource_proof_verified: action === 'supplier-certify', license_verified: action === 'supplier-certify' };
+        const checked = name => Boolean(document.querySelector(`[data-supplier-check="${name}"][data-id="${CSS.escape(id)}"]`)?.checked);
+        const approving = action === 'supplier-certify';
+        body = { decision: approving ? 'certified' : 'needs_changes', reason: document.querySelector(`[data-reason="${CSS.escape(id)}"]`)?.value || '请补充认证材料', license_verified: approving && checked('license'), subject_verified: approving && checked('subject'), agent_verified: approving && checked('agent'), bank_account_verified: false, invoice_verified: false, resource_proof_verified: false };
       } else if (action.startsWith('intake-')) {
         path = `/api/admin/intakes/${encodeURIComponent(id)}/review`;
         body = { decision: action === 'intake-verify' ? 'verified' : 'rejected', verification_summary: document.querySelector(`[data-summary="${CSS.escape(id)}"]`)?.value || '验真材料不满足要求' };

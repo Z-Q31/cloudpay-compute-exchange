@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import base64
 import os
 import subprocess
 import sys
@@ -50,6 +51,11 @@ class Client:
             "account": account, "password": "SupplierRebateFlow#2026",
         })
         self.csrf = result["csrf_token"]
+
+    def download(self, path: str) -> bytes:
+        request = urllib.request.Request(BASE + path, method="GET", headers={"Accept": "*/*"})
+        with self.opener.open(request, timeout=10) as response:
+            return response.read()
 
     def request_error(self, method: str, path: str, body: dict, expected_status: int) -> dict:
         payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
@@ -126,7 +132,7 @@ def main() -> None:
                 """INSERT INTO users(id,name,account,password_hash,role,enterprise_status,created_at,updated_at)
                    VALUES(?,?,?,?,?,?,?,?)""",
                 [
-                    ("supplier_http", "HTTP 供应商", "supplier-http@example.test", password_hash, "supplier", "certified", created, created),
+                    ("supplier_http", "HTTP 供应商", "supplier-http@example.test", password_hash, "buyer", "unverified", created, created),
                     ("buyer_http", "HTTP 采购方", "buyer-http@example.test", password_hash, "buyer", "unverified", created, created),
                     ("admin_http", "HTTP 平台管理员", "admin-http@example.test", password_hash, "admin", "verified", created, created),
                 ],
@@ -159,6 +165,25 @@ def main() -> None:
             }, 403)
             assert buyer_rejected["error"]["code"] == "permission_denied"
 
+            supplier_before_certification = supplier.request("GET", "/api/supplier-rebate/overview")
+            assert supplier_before_certification["eligible"] is False
+            license_bytes = b"\x89PNG\r\n\x1a\n" + b"CLOUDPAY-SUPPLIER-LICENSE-EVIDENCE"
+            application = supplier.request("POST", "/api/suppliers/applications", {
+                "enterprise_name": "HTTP 供应企业", "credit_code": "91310000MA1K123456",
+                "legal_representative": "测试法人", "agent_name": "认证经办人", "contact_phone": "13800138000",
+                "declaration_accepted": True, "license_file_name": "three-in-one-license.png",
+                "license_content_base64": base64.b64encode(license_bytes).decode("ascii"),
+            })["application"]
+            assert application["status"] == "reviewing" and application["license_uploaded"] is True
+            pending_application = next(row for row in admin.request("GET", "/api/admin/overview")["applications"] if row["id"] == application["id"])
+            assert admin.download(pending_application["license_download_url"]) == license_bytes
+            admin.request("POST", f"/api/admin/suppliers/{application['id']}/review", {
+                "decision": "certified", "reason": "营业执照、企业主体及授权经办人核验通过",
+                "license_verified": True, "subject_verified": True, "agent_verified": True,
+            })
+            certified_identity = supplier.request("GET", "/api/auth/me")["user"]
+            assert certified_identity["role"] == "supplier" and certified_identity["enterprise_status"] == "certified"
+
             auto_accept = buyer.request("POST", "/api/orders/order_auto/accept", {})
             assert auto_accept["order"]["status"] == "accepted"
             supplier_overview = supplier.request("GET", "/api/supplier-rebate/overview")
@@ -168,11 +193,14 @@ def main() -> None:
             auto_submission = supplier.request("POST", "/api/supplier-rebate/submissions", {
                 "order_id": "order_auto", "submission_band": "up_to_50000",
                 "transaction_summary": "H100 算力资源已经按订单完成交付并通过验收",
+                "evidence_file_name": "settlement-auto.png",
+                "evidence_content_base64": base64.b64encode(license_bytes).decode("ascii"),
             })
             auto_rebate = auto_submission["rebate"]
             assert auto_rebate["rebate_rate_bps"] == 80
             assert auto_rebate["rebate_card_hours"] == 8
             assert auto_rebate["status"] == "issued"
+            assert supplier.download(auto_rebate["evidence_download_url"]) == license_bytes
             replay = supplier.request("POST", "/api/supplier-rebate/submissions", {
                 "order_id": "order_auto", "submission_band": "up_to_50000",
                 "transaction_summary": "重复提交应返回同一条返佣记录而不能重复发放卡时",
@@ -196,6 +224,8 @@ def main() -> None:
             review_submission = supplier.request("POST", "/api/supplier-rebate/submissions", {
                 "order_id": "order_review", "submission_band": "over_50000",
                 "transaction_summary": "大额 H100 算力资源已完成交付，提交平台复核计量与结算内容",
+                "evidence_file_name": "settlement-review.png",
+                "evidence_content_base64": base64.b64encode(license_bytes).decode("ascii"),
             })
             supplier_overview = supplier.request("GET", "/api/supplier-rebate/overview")
             review_rebate = next(row for row in supplier_overview["rebates"] if row["order_id"] == "order_review")
@@ -207,6 +237,7 @@ def main() -> None:
 
             admin_overview = admin.request("GET", "/api/admin/overview")
             pending = next(row for row in admin_overview["supplier_rebates"] if row["order_id"] == "order_review")
+            assert admin.download(pending["evidence_download_url"]) == license_bytes
             approved = admin.request(
                 "POST", f"/api/admin/supplier-rebates/{pending['id']}/review",
                 {"decision": "approve", "reason": "订单计量与交付记录核验通过"},

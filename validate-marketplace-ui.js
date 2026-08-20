@@ -25,7 +25,7 @@ const baseUrl = process.env.KAI_BASE_URL || 'http://127.0.0.1:4176/';
   const unique = `supplier-ui-${Date.now()}@example.com`;
   const applicationId = await supplier.evaluate(async account => {
     const registration = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: '前端上架验收供应商', account, password: 'SupplierUi2026' }) }).then(response => response.json());
-    const application = await fetch('/api/suppliers/applications', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-KAI-CSRF': registration.csrf_token }, body: JSON.stringify({ enterprise_name: '前端上架验收供应商', credit_code: '91310000MA1K888888', agent_name: '前端测试经办人' }) }).then(response => response.json());
+    const application = await fetch('/api/suppliers/applications', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-KAI-CSRF': registration.csrf_token }, body: JSON.stringify({ enterprise_name: '前端上架验收供应商', credit_code: '91310000MA1K888888', legal_representative: '前端测试法人', agent_name: '前端测试经办人', contact_phone: '13800138000', declaration_accepted: true, license_file_name: 'three-in-one-license.png', license_content_base64: 'iVBORw0KGgpLQUktTElDRU5TRS1VSQ==' }) }).then(response => response.json());
     return application.application.id;
   }, unique);
   await admin.evaluate(async applicationId => {

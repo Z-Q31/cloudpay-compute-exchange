@@ -26,6 +26,12 @@
 .operations-card p { margin: 0 0 7px; color: #547266; font-size: 14px; }
 .operations-card small { color: #789188; }
 .operations-card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: 410px; }
+.operations-supplier-certification { align-items: stretch; }
+.operations-evidence-link { display: inline-flex; margin-top: 9px; padding: 8px 10px; border: 1px solid rgba(23,130,87,.24); border-radius: 9px; background: #fff; color: #176b49; font-size: 13px; font-weight: 700; text-decoration: none; }
+.operations-evidence-missing { display: block; margin-top: 9px; color: #a43f36; font-size: 13px; }
+.operations-certification-checks { display: grid; width: 100%; gap: 6px; padding: 10px; border: 1px solid rgba(32,112,78,.14); border-radius: 10px; background: #fff; }
+.operations-certification-checks label { display: flex; align-items: center; gap: 7px; color: #355c4c; font-size: 13px; }
+.operations-certification-checks input { width: auto; min-width: 0; margin: 0; padding: 0; accent-color: #178257; }
 .operations-card input { min-width: 220px; border: 1px solid rgba(32, 112, 78, .24); border-radius: 10px; background: #fff; padding: 10px 12px; color: #173d30; font: inherit; }
 .operations-card button { border: 1px solid rgba(32, 112, 78, .22); border-radius: 10px; background: #fff; color: #176b49; padding: 10px 13px; font: inherit; font-weight: 750; cursor: pointer; }
 .operations-card button[data-primary] { border-color: #178257; background: #178257; color: #fff; }

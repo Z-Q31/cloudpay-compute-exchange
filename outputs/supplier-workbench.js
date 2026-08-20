@@ -27,7 +27,7 @@
 
     <section class="supplier-gate" aria-labelledby="supplierGateTitle">
       <div><span class="supplier-gate-dot" aria-hidden="true"></span><div><small>企业供应商状态</small><b id="workbenchSupplierState">正在读取账户状态</b><p id="workbenchSupplierHint">只有已认证企业供应商可以提交上架审核。</p></div></div>
-      <button class="secondary" type="button" data-supplier-assessment>进入供应商认证</button>
+      <button class="secondary" type="button" data-supplier-certification>进入供应商认证</button>
     </section>
 
     <section class="supplier-certification-entry" id="supplierCertificationEntry" data-state="pending" aria-labelledby="supplierCertificationTitle">
@@ -43,6 +43,23 @@
         <button class="primary" type="button" id="supplierCertificationAction">开始供应商认证</button>
         <button class="secondary" type="button" id="supplierRebateMaterialsAction" hidden>进入返佣材料提交</button>
       </div>
+      <form class="supplier-certification-form" id="supplierCertificationForm" hidden novalidate>
+        <div class="supplier-certification-form-head"><div><small>ENTERPRISE MATERIALS</small><h3>提交企业认证材料</h3><p>营业执照仅供平台认证审核，不会在市场页面公开。</p></div><span id="supplierCertificationApplicationId">新申请</span></div>
+        <div class="supplier-certification-grid">
+          <label>企业全称<input id="certEnterpriseName" autocomplete="organization" maxlength="120" placeholder="必须与营业执照完全一致" required></label>
+          <label>统一社会信用代码<input id="certCreditCode" autocomplete="off" maxlength="18" placeholder="18 位统一社会信用代码" required></label>
+          <label>法定代表人<input id="certLegalRepresentative" autocomplete="name" maxlength="60" placeholder="营业执照登记姓名" required></label>
+          <label>授权经办人<input id="certAgentName" autocomplete="name" maxlength="60" placeholder="本次认证经办人姓名" required></label>
+          <label>联系电话<input id="certContactPhone" autocomplete="tel" maxlength="60" placeholder="便于平台核验联系" required></label>
+          <label class="supplier-license-upload">三证合一营业执照
+            <input id="certLicenseFile" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required>
+            <span id="certLicenseFileState">上传 PDF、JPG 或 PNG，文件不超过 5MB</span>
+          </label>
+        </div>
+        <label class="supplier-certification-declaration"><input id="certDeclaration" type="checkbox" required><span>我确认提交的企业主体和营业执照真实、有效，并授权平台用于供应商准入核验。</span></label>
+        <div class="supplier-certification-review-note" id="supplierCertificationReviewNote" hidden></div>
+        <div class="supplier-certification-form-actions"><button class="primary" id="submitSupplierCertification" type="submit">提交平台认证</button><span id="supplierCertificationFormStatus" role="status"></span></div>
+      </form>
     </section>
 
     <section class="supplier-kpis" aria-label="供应商经营概览">
@@ -191,7 +208,7 @@
   let supplierIdentity = null;
   let editingDraftId = null;
   let supplierCsrf = '';
-  let supplierData = { intakes: [], listings: [], orders: [], settlements: [] };
+  let supplierData = { applications: [], intakes: [], listings: [], orders: [], settlements: [] };
 
   async function supplierApi(path, options = {}) {
     const headers = new Headers(options.headers || {});
@@ -485,13 +502,24 @@
     else if (typeof toast === 'function') toast('供应商评估模块正在加载，请稍后重试');
   }
 
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('营业执照读取失败，请重新选择文件'));
+      reader.readAsDataURL(file);
+    });
+  }
+
   function openCertification() {
     if (!supplierIdentity) {
       document.querySelector('.account')?.click();
       if (typeof toast === 'function') toast('请先登录企业账户再申请供应商认证');
       return;
     }
-    openAssessment();
+    const form = $('#supplierCertificationForm');
+    form.hidden = !form.hidden;
+    if (!form.hidden) form.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   function openRebateMaterials() {
@@ -507,14 +535,34 @@
     const action = $('#supplierCertificationAction');
     const materials = $('#supplierRebateMaterialsAction');
     const copy = $('#supplierCertificationDescription');
+    const form = $('#supplierCertificationForm');
+    const submit = $('#submitSupplierCertification');
+    const application = (supplierData.applications || [])[0];
+    const reviewNote = $('#supplierCertificationReviewNote');
     entry.dataset.state = supplierCertified ? 'certified' : status === 'reviewing' ? 'reviewing' : 'pending';
     action.hidden = false;
     action.disabled = false;
     materials.hidden = true;
+    submit.hidden = supplierCertified || status === 'reviewing';
+    reviewNote.hidden = !application?.review_reason;
+    reviewNote.textContent = application?.review_reason ? `平台审核意见：${application.review_reason}` : '';
+    if (application) {
+      $('#supplierCertificationApplicationId').textContent = `申请编号 ${application.id}`;
+      $('#certEnterpriseName').value = application.enterprise_name || '';
+      $('#certCreditCode').value = application.credit_code || '';
+      $('#certLegalRepresentative').value = application.legal_representative || '';
+      $('#certAgentName').value = application.agent_name || '';
+      $('#certContactPhone').value = application.contact_phone || '';
+      if (application.license_uploaded) {
+        const size = Number(application.license_size || 0) / 1024;
+        $('#certLicenseFileState').textContent = `已提交：${application.license_file_name} · ${size.toFixed(size >= 100 ? 0 : 1)} KB`;
+      }
+    }
     if (!supplierIdentity) {
       state.textContent = '登录后申请';
       action.textContent = '登录并申请认证';
       copy.textContent = '所有企业账号都可以查看供应商业务内容；登录后从这里提交企业主体认证。';
+      form.hidden = true;
       return;
     }
     if (supplierCertified) {
@@ -598,6 +646,61 @@
     } finally { button.disabled = false; }
   }
 
+  async function submitCertification(event) {
+    event.preventDefault();
+    const status = $('#supplierCertificationFormStatus');
+    const submit = $('#submitSupplierCertification');
+    const enterpriseName = $('#certEnterpriseName').value.trim();
+    const creditCode = $('#certCreditCode').value.trim().toUpperCase();
+    const legalRepresentative = $('#certLegalRepresentative').value.trim();
+    const agentName = $('#certAgentName').value.trim();
+    const contactPhone = $('#certContactPhone').value.trim();
+    const file = $('#certLicenseFile').files[0];
+    status.textContent = '';
+    if (!enterpriseName || !legalRepresentative || !agentName || !contactPhone) {
+      status.textContent = '请完整填写企业、法定代表人、经办人和联系电话。';
+      return;
+    }
+    if (!/^[0-9A-HJ-NPQRTUWXY]{18}$/.test(creditCode)) {
+      status.textContent = '统一社会信用代码应为 18 位数字或大写字母。';
+      $('#certCreditCode').focus();
+      return;
+    }
+    if (!file) {
+      status.textContent = '请上传三证合一营业执照。';
+      $('#certLicenseFile').focus();
+      return;
+    }
+    const supportedFile = ['application/pdf', 'image/jpeg', 'image/png'].includes(file.type) || /\.(pdf|jpe?g|png)$/i.test(file.name);
+    if (!supportedFile || file.size > 5 * 1024 * 1024) {
+      status.textContent = '营业执照仅支持 PDF、JPG、PNG，且不能超过 5MB。';
+      return;
+    }
+    if (!$('#certDeclaration').checked) {
+      status.textContent = '请确认材料真实有效并同意平台核验。';
+      return;
+    }
+    submit.disabled = true;
+    submit.textContent = '正在安全上传…';
+    try {
+      const licenseContent = await readFileAsDataUrl(file);
+      const result = await supplierApi('/api/suppliers/applications', { method: 'POST', body: {
+        enterprise_name: enterpriseName, credit_code: creditCode,
+        legal_representative: legalRepresentative, agent_name: agentName, contact_phone: contactPhone,
+        declaration_accepted: true, license_file_name: file.name, license_content_base64: licenseContent
+      }});
+      status.textContent = `申请 ${result.application.id} 已提交，平台将查验营业执照、企业主体和经办人。`;
+      if (typeof toast === 'function') toast('企业认证材料已提交，等待平台审核');
+      await syncSupplierAccount();
+      $('#supplierCertificationForm').hidden = false;
+    } catch (error) {
+      status.textContent = error.message;
+    } finally {
+      submit.disabled = false;
+      submit.textContent = '提交平台认证';
+    }
+  }
+
   async function syncSupplierAccount() {
     const state = $('#workbenchSupplierState');
     const hint = $('#workbenchSupplierHint');
@@ -607,14 +710,17 @@
       if (!payload.authenticated) {
         supplierIdentity = null;
         supplierCertified = false;
+        supplierData = { applications: [], intakes: [], listings: [], orders: [], settlements: [] };
         state.textContent = '未登录';
         hint.textContent = '登录企业账户后可读取认证状态和容量账本。';
         $('.supplier-gate').dataset.state = 'pending';
         renderCertificationEntry();
         return;
       }
+      if (supplierIdentity?.id !== payload.user.id) supplierData = { applications: [], intakes: [], listings: [], orders: [], settlements: [] };
       supplierIdentity = payload.user;
       supplierCsrf = payload.csrf_token || '';
+      if (!$('#certContactPhone').value && /^1\d{10}$/.test(payload.user.account || '')) $('#certContactPhone').value = payload.user.account;
       const statusLabels = { unverified: '待供应商认证', verified: '企业账户已核验 · 待供应商认证', reviewing: '供应商认证审核中', certified: '供应商已认证', restricted: '供应商权限受限', paused: '供应商权限已暂停', exited: '已退出' };
       supplierCertified = payload.user.enterprise_status === 'certified' && payload.user.role === 'supplier';
       state.textContent = statusLabels[payload.user.enterprise_status] || payload.user.enterprise_status;
@@ -624,6 +730,10 @@
       if (payload.user.role === 'supplier' || payload.user.role === 'supplier_pending') {
         supplierData = await supplierApi('/api/supplier/workbench');
         renderSupplierData();
+        renderCertificationEntry(payload.user.enterprise_status);
+      } else {
+        supplierData = { applications: [], intakes: [], listings: [], orders: [], settlements: [] };
+        renderCertificationEntry(payload.user.enterprise_status);
       }
     } catch (_) {
       state.textContent = '服务端状态暂不可用';
@@ -634,8 +744,16 @@
   $$('[data-supplier-tab]').forEach(button => button.addEventListener('click', () => switchTab(button.dataset.supplierTab)));
   $$('[data-supplier-open-kind]').forEach(button => button.addEventListener('click', () => openKind(button.dataset.supplierOpenKind)));
   $$('[data-supplier-assessment]').forEach(button => button.addEventListener('click', openAssessment));
+  $$('[data-supplier-certification]').forEach(button => button.addEventListener('click', openCertification));
   $('#supplierCertificationAction').addEventListener('click', openCertification);
   $('#supplierRebateMaterialsAction').addEventListener('click', openRebateMaterials);
+  $('#supplierCertificationForm').addEventListener('submit', submitCertification);
+  $('#certLicenseFile').addEventListener('change', event => {
+    const file = event.target.files[0];
+    $('#certLicenseFileState').textContent = file
+      ? `${file.name} · ${(file.size / 1024).toFixed(file.size >= 102400 ? 0 : 1)} KB`
+      : '上传 PDF、JPG 或 PNG，文件不超过 5MB';
+  });
   $$('[data-listing-kind]').forEach(button => button.addEventListener('click', () => setKind(button.dataset.listingKind)));
   $('#supplierTokenPriceType').addEventListener('change', () => { updateTokenUnit(); updatePreview(); });
   $('#supplierRegion').addEventListener('change', () => { updatePreview(); refreshReferencePrice(); });

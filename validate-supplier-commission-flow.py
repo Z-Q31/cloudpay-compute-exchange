@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""HTTP flow for automatic and reviewed supplier card-hour rebates."""
+"""HTTP flow for supplier-submitted automatic and reviewed card-hour rebates."""
 
 from __future__ import annotations
 
@@ -50,6 +50,20 @@ class Client:
             "account": account, "password": "SupplierRebateFlow#2026",
         })
         self.csrf = result["csrf_token"]
+
+    def request_error(self, method: str, path: str, body: dict, expected_status: int) -> dict:
+        payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
+        headers = {"Accept": "application/json", "Content-Type": "application/json"}
+        if self.csrf:
+            headers["X-KAI-CSRF"] = self.csrf
+        request = urllib.request.Request(BASE + path, data=payload, method=method, headers=headers)
+        try:
+            self.opener.open(request, timeout=10)
+        except urllib.error.HTTPError as error:
+            detail = json.loads(error.read().decode("utf-8"))
+            assert error.code == expected_status, detail
+            return detail
+        raise AssertionError(f"{method} {path} unexpectedly succeeded")
 
 
 def wait_ready(process: subprocess.Popen) -> None:
@@ -137,13 +151,33 @@ def main() -> None:
             buyer = Client(); buyer.login("buyer-http@example.test")
             admin = Client(); admin.login("admin-http@example.test")
 
+            buyer_overview = buyer.request("GET", "/api/supplier-rebate/overview")
+            assert buyer_overview["eligible"] is False and len(buyer_overview["policy"]["tiers"]) == 5
+            buyer_rejected = buyer.request_error("POST", "/api/supplier-rebate/submissions", {
+                "order_id": "order_auto", "submission_band": "up_to_50000",
+                "transaction_summary": "普通采购账户不能冒充供应商提交返佣申请",
+            }, 403)
+            assert buyer_rejected["error"]["code"] == "permission_denied"
+
             auto_accept = buyer.request("POST", "/api/orders/order_auto/accept", {})
             assert auto_accept["order"]["status"] == "accepted"
             supplier_overview = supplier.request("GET", "/api/supplier-rebate/overview")
-            auto_rebate = next(row for row in supplier_overview["rebates"] if row["order_id"] == "order_auto")
+            assert supplier_overview["rebates"] == []
+            eligible_auto = next(row for row in supplier_overview["eligible_orders"] if row["id"] == "order_auto")
+            assert eligible_auto["submission_band"] == "up_to_50000"
+            auto_submission = supplier.request("POST", "/api/supplier-rebate/submissions", {
+                "order_id": "order_auto", "submission_band": "up_to_50000",
+                "transaction_summary": "H100 算力资源已经按订单完成交付并通过验收",
+            })
+            auto_rebate = auto_submission["rebate"]
             assert auto_rebate["rebate_rate_bps"] == 80
             assert auto_rebate["rebate_card_hours"] == 8
             assert auto_rebate["status"] == "issued"
+            replay = supplier.request("POST", "/api/supplier-rebate/submissions", {
+                "order_id": "order_auto", "submission_band": "up_to_50000",
+                "transaction_summary": "重复提交应返回同一条返佣记录而不能重复发放卡时",
+            })
+            assert replay["idempotent_replay"] is True and replay["rebate"]["id"] == auto_rebate["id"]
             assets = supplier.request("GET", "/api/assets")["assets"]
             auto_asset = next(row for row in assets if row["provider"] == "CloudPay 供应商返佣")
             assert auto_asset["quantity"] == 8
@@ -154,8 +188,18 @@ def main() -> None:
 
             review_accept = buyer.request("POST", "/api/orders/order_review/accept", {})
             assert review_accept["order"]["status"] == "accepted"
+            mismatch = supplier.request_error("POST", "/api/supplier-rebate/submissions", {
+                "order_id": "order_review", "submission_band": "up_to_50000",
+                "transaction_summary": "故意选择错误金额区间用于验证服务端订单金额校验",
+            }, 422)
+            assert mismatch["error"]["code"] == "rebate_band_mismatch"
+            review_submission = supplier.request("POST", "/api/supplier-rebate/submissions", {
+                "order_id": "order_review", "submission_band": "over_50000",
+                "transaction_summary": "大额 H100 算力资源已完成交付，提交平台复核计量与结算内容",
+            })
             supplier_overview = supplier.request("GET", "/api/supplier-rebate/overview")
             review_rebate = next(row for row in supplier_overview["rebates"] if row["order_id"] == "order_review")
+            assert review_submission["rebate"]["id"] == review_rebate["id"]
             assert review_rebate["rebate_rate_bps"] == 20
             assert review_rebate["rebate_card_hours"] == 2
             assert review_rebate["status"] == "pending_review"

@@ -1073,6 +1073,8 @@ def initialize_database() -> None:
               status TEXT NOT NULL, pre_hold_status TEXT, review_required INTEGER NOT NULL DEFAULT 0,
               conversion_basis TEXT NOT NULL, synthetic_order_id TEXT REFERENCES orders(id),
               allocation_id TEXT REFERENCES allocations(id), reviewer_user_id TEXT REFERENCES users(id),
+              submitted_by TEXT REFERENCES users(id), submission_band TEXT,
+              transaction_summary TEXT, submitted_at TEXT,
               review_reason TEXT, reviewed_at TEXT, issued_at TEXT, reversed_at TEXT,
               created_at TEXT NOT NULL, updated_at TEXT NOT NULL
             );
@@ -1154,6 +1156,10 @@ def initialize_database() -> None:
         add_column_if_missing(connection, "orders", "swap_id", "TEXT")
         add_column_if_missing(connection, "settlements", "referral_commission_cents", "INTEGER NOT NULL DEFAULT 0")
         add_column_if_missing(connection, "supplier_card_hour_rebates", "pre_hold_status", "TEXT")
+        add_column_if_missing(connection, "supplier_card_hour_rebates", "submitted_by", "TEXT")
+        add_column_if_missing(connection, "supplier_card_hour_rebates", "submission_band", "TEXT")
+        add_column_if_missing(connection, "supplier_card_hour_rebates", "transaction_summary", "TEXT")
+        add_column_if_missing(connection, "supplier_card_hour_rebates", "submitted_at", "TEXT")
         add_column_if_missing(connection, "allocations", "kind", "TEXT NOT NULL DEFAULT 'gpu'")
         add_column_if_missing(connection, "allocations", "product_code", "TEXT")
         add_column_if_missing(connection, "allocations", "provider", "TEXT")
@@ -1376,7 +1382,10 @@ def create_supplier_card_hour_rebate(
     connection: sqlite3.Connection,
     order: sqlite3.Row,
     supplier_user_id: str,
-    accepted_at: str,
+    submitted_by: str,
+    submission_band: str,
+    transaction_summary: str,
+    submitted_at: str,
 ) -> sqlite3.Row | None:
     existing = connection.execute(
         "SELECT * FROM supplier_card_hour_rebates WHERE order_id=?", (order["id"],)
@@ -1392,28 +1401,34 @@ def create_supplier_card_hour_rebate(
     if rate_bps <= 0 or source_micros <= 0 or rebate_micros <= 0:
         return None
     review_required = amount_cents > SUPPLIER_REBATE_REVIEW_CENTS
+    expected_band = "over_50000" if review_required else "up_to_50000"
+    if submission_band != expected_band:
+        raise ApiError(422, "所选金额区间与订单实际金额不一致", "rebate_band_mismatch")
     rebate_id = uid("supplier_rebate")
     status = "pending_review" if review_required else "calculated"
     connection.execute(
         """INSERT INTO supplier_card_hour_rebates(
            id,order_id,supplier_user_id,listing_id,amount_cents,source_card_hours_micros,
-           rebate_rate_bps,rebate_card_hours_micros,unit,status,review_required,conversion_basis,created_at,updated_at
-           ) VALUES(?,?,?,?,?,?,?,?,?,?,?,'order_quantity_gpu_hour',?,?)""",
+           rebate_rate_bps,rebate_card_hours_micros,unit,status,review_required,conversion_basis,
+           submitted_by,submission_band,transaction_summary,submitted_at,created_at,updated_at
+           ) VALUES(?,?,?,?,?,?,?,?,?,?,?,'order_quantity_gpu_hour',?,?,?,?,?,?)""",
         (
             rebate_id, order["id"], supplier_user_id, order["listing_id"], amount_cents, source_micros,
-            rate_bps, rebate_micros, "GPU 时", status, int(review_required), accepted_at, accepted_at,
+            rate_bps, rebate_micros, "GPU 时", status, int(review_required), submitted_by,
+            submission_band, transaction_summary, submitted_at, submitted_at, submitted_at,
         ),
     )
-    audit(connection, None, "supplier_card_hour_rebate", rebate_id,
+    audit(connection, submitted_by, "supplier_card_hour_rebate", rebate_id,
           "supplier_rebate.pending_review" if review_required else "supplier_rebate.calculated", {
               "order_id": order["id"], "supplier_user_id": supplier_user_id,
               "amount_cents": amount_cents, "source_card_hours": source_micros / CARD_HOUR_MICROS,
               "rebate_rate_bps": rate_bps, "rebate_card_hours": rebate_micros / CARD_HOUR_MICROS,
               "review_required": review_required,
+              "submission_band": submission_band,
           })
     rebate = connection.execute("SELECT * FROM supplier_card_hour_rebates WHERE id=?", (rebate_id,)).fetchone()
     if not review_required:
-        rebate = issue_supplier_card_hour_rebate(connection, rebate, None, accepted_at)
+        rebate = issue_supplier_card_hour_rebate(connection, rebate, submitted_by, submitted_at)
     return rebate
 
 
@@ -1829,6 +1844,8 @@ class KaiHandler(BaseHTTPRequestHandler):
                 return self.create_order()
             if path == "/api/purchase-requests":
                 return self.create_purchase_request()
+            if path == "/api/supplier-rebate/submissions":
+                return self.create_supplier_rebate_submission()
             if path == "/api/payments/create":
                 return self.create_payment()
             if path == "/api/payments/mock-complete":
@@ -2678,6 +2695,7 @@ class KaiHandler(BaseHTTPRequestHandler):
     def get_supplier_rebate_overview(self) -> None:
         session = self.session()
         rebates = []
+        eligible_orders = []
         if session["role"] == "supplier" and session["enterprise_status"] == "certified":
             with db_connect() as connection:
                 rebates = connection.execute(
@@ -2686,6 +2704,38 @@ class KaiHandler(BaseHTTPRequestHandler):
                        WHERE r.supplier_user_id=? ORDER BY r.created_at DESC LIMIT 300""",
                     (session["user_id"],),
                 ).fetchall()
+                order_rows = connection.execute(
+                    """SELECT o.* FROM orders o JOIN listings l ON l.id=o.listing_id
+                       WHERE l.supplier_user_id=? AND o.status='accepted' AND o.kind='gpu'
+                       AND o.unit='GPU 时' AND o.settlement_mode='cash'
+                       AND NOT EXISTS(
+                         SELECT 1 FROM supplier_card_hour_rebates r WHERE r.order_id=o.id
+                       )
+                       AND NOT EXISTS(
+                         SELECT 1 FROM disputes d WHERE d.order_id=o.id
+                         AND d.status IN ('open','reviewing')
+                       )
+                       AND NOT EXISTS(
+                         SELECT 1 FROM refunds f WHERE f.order_id=o.id
+                         AND f.status IN ('pending_review','approved','processing','success')
+                       )
+                       ORDER BY o.accepted_at DESC LIMIT 200""",
+                    (session["user_id"],),
+                ).fetchall()
+                for row in order_rows:
+                    amount_cents = int(row["amount_cents"])
+                    eligible_orders.append({
+                        "id": row["id"], "order_no": row["order_no"],
+                        "product_code": row["product_code"], "gpu": row["gpu"],
+                        "region": row["region"], "amount_cents": amount_cents,
+                        "amount_cny": amount_cents / 100,
+                        "card_hours": float(row["quantity"]), "unit": row["unit"],
+                        "accepted_at": row["accepted_at"],
+                        "submission_band": (
+                            "over_50000" if amount_cents > SUPPLIER_REBATE_REVIEW_CENTS
+                            else "up_to_50000"
+                        ),
+                    })
         summary = {
             "source_card_hours": sum(row["source_card_hours_micros"] for row in rebates) / CARD_HOUR_MICROS,
             "issued_card_hours": sum(
@@ -2703,10 +2753,71 @@ class KaiHandler(BaseHTTPRequestHandler):
                 "enterprise_status": session["enterprise_status"],
             },
             "eligible": session["role"] == "supplier" and session["enterprise_status"] == "certified",
+            "eligible_orders": eligible_orders,
             "rebates": [supplier_rebate_dict(row) for row in rebates],
             "summary": summary,
             "policy": supplier_rebate_policy(),
         })
+
+    def create_supplier_rebate_submission(self) -> None:
+        session = self.session(csrf=True)
+        require_role(session, "supplier")
+        if session["enterprise_status"] != "certified":
+            raise ApiError(403, "仅已认证供应商可以提交返佣申请", "supplier_not_certified")
+        self.rate_limit(f"supplier-rebate-submit:{session['user_id']}", 30, 3600)
+        data = self.read_json()
+        order_id = clean_text(data.get("order_id"), "成交订单", 3, 100)
+        submission_band = clean_text(data.get("submission_band"), "金额区间", 5, 30)
+        if submission_band not in ("up_to_50000", "over_50000"):
+            raise ApiError(422, "请选择正确的成交金额区间", "invalid_rebate_band")
+        transaction_summary = clean_text(data.get("transaction_summary"), "交易内容", 10, 1000)
+        submitted_at = now_iso()
+        with db_connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                order = connection.execute(
+                    """SELECT o.*,l.supplier_user_id FROM orders o
+                       JOIN listings l ON l.id=o.listing_id WHERE o.id=?""",
+                    (order_id,),
+                ).fetchone()
+                if not order or order["supplier_user_id"] != session["user_id"]:
+                    raise ApiError(404, "未找到可申报的供应商成交订单", "rebate_order_not_found")
+                existing = connection.execute(
+                    "SELECT * FROM supplier_card_hour_rebates WHERE order_id=?", (order_id,)
+                ).fetchone()
+                if existing:
+                    if existing["submission_band"] and existing["submission_band"] != submission_band:
+                        raise ApiError(409, "该订单已经按另一金额区间提交", "rebate_submission_conflict")
+                    connection.execute("COMMIT")
+                    return self.json_response(200, {
+                        "ok": True, "rebate": supplier_rebate_dict(existing),
+                        "idempotent_replay": True,
+                    })
+                if (
+                    order["status"] != "accepted" or order["kind"] != "gpu"
+                    or order["unit"] != "GPU 时" or order["settlement_mode"] != "cash"
+                ):
+                    raise ApiError(409, "该订单尚不符合返佣申报条件", "rebate_order_not_eligible")
+                blocking_case = connection.execute(
+                    """SELECT 1 FROM disputes WHERE order_id=? AND status IN ('open','reviewing')
+                       UNION ALL SELECT 1 FROM refunds WHERE order_id=?
+                       AND status IN ('pending_review','approved','processing','success') LIMIT 1""",
+                    (order_id, order_id),
+                ).fetchone()
+                if blocking_case:
+                    raise ApiError(409, "订单存在争议或退款，暂不能提交返佣", "rebate_submission_blocked")
+                rebate = create_supplier_card_hour_rebate(
+                    connection, order, session["user_id"], session["user_id"],
+                    submission_band, transaction_summary, submitted_at,
+                )
+                if not rebate:
+                    raise ApiError(409, "该订单无法换算返佣卡时", "rebate_conversion_unavailable")
+                connection.execute("COMMIT")
+            except Exception:
+                if connection.in_transaction:
+                    connection.execute("ROLLBACK")
+                raise
+        self.json_response(201, {"ok": True, "rebate": supplier_rebate_dict(rebate)})
 
     def update_supplier_referral_program(self) -> None:
         session = self.session(csrf=True)
@@ -3600,7 +3711,6 @@ class KaiHandler(BaseHTTPRequestHandler):
                     })
                 if settlement_mode == "cash":
                     platform_fee = int(round(order["amount_cents"] * PLATFORM_FEE_BPS / 10000))
-                    supplier_rebate = create_supplier_card_hour_rebate(connection, order, supplier["id"], accepted_at)
                     supplier_net = order["amount_cents"] - platform_fee
                     hold_until = (datetime.now(timezone.utc) + timedelta(hours=SETTLEMENT_HOLD_HOURS)).replace(microsecond=0).isoformat()
                     settlement_id = uid("settlement")
@@ -3614,10 +3724,6 @@ class KaiHandler(BaseHTTPRequestHandler):
                     audit(connection, session["user_id"], "settlement", settlement_id, "settlement.eligible", {
                         "order_id": order_id, "reason": "buyer_accepted", "gross_cents": order["amount_cents"],
                         "platform_fee_cents": platform_fee, "supplier_net_cents": supplier_net,
-                        "supplier_rebate_id": supplier_rebate["id"] if supplier_rebate else None,
-                        "supplier_rebate_card_hours": (
-                            supplier_rebate["rebate_card_hours_micros"] / CARD_HOUR_MICROS if supplier_rebate else 0
-                        ),
                         "hold_until": hold_until,
                     })
                 connection.execute("COMMIT")

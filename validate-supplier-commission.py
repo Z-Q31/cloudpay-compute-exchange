@@ -64,13 +64,20 @@ def main() -> None:
                     ),
                 )
                 order = server.fetch_order(connection, order_id)
-                rebate = server.create_supplier_card_hour_rebate(connection, order, "supplier_rebate", created)
+                band = "over_50000" if amount_cents > server.SUPPLIER_REBATE_REVIEW_CENTS else "up_to_50000"
+                rebate = server.create_supplier_card_hour_rebate(
+                    connection, order, "supplier_rebate", "supplier_rebate", band,
+                    f"{order_id} 真实算力交易与交付说明", created,
+                )
                 assert rebate is not None
                 assert rebate["rebate_rate_bps"] == expected_bps
                 assert rebate["rebate_card_hours_micros"] == int(expected_hours * server.CARD_HOUR_MICROS)
                 assert rebate["status"] == expected_status
                 assert bool(rebate["review_required"]) == (expected_status == "pending_review")
-                replay = server.create_supplier_card_hour_rebate(connection, order, "supplier_rebate", created)
+                replay = server.create_supplier_card_hour_rebate(
+                    connection, order, "supplier_rebate", "supplier_rebate", band,
+                    f"{order_id} 真实算力交易与交付说明", created,
+                )
                 assert replay["id"] == rebate["id"]
             connection.execute("COMMIT")
 

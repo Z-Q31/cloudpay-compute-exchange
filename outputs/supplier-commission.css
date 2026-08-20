@@ -27,9 +27,17 @@
 .supplier-rebate-portal { scroll-margin-top: 20px; margin: 30px 0; padding: 22px; border: 1px solid #b9d8c4; border-radius: 20px; background: linear-gradient(145deg, rgba(226, 244, 232, .75), rgba(255, 255, 255, .96)); box-shadow: 0 16px 40px rgba(28, 83, 48, .08); }
 .supplier-rebate-portal .supplier-commission-section-head { margin-top: 0; }
 .supplier-portal-close { white-space: nowrap; }
+.rebate-portal-lock { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 14px; align-items: center; margin-bottom: 14px; padding: 16px; border: 1px solid #dfcc8d; border-radius: 14px; background: #fff9e8; }
+.rebate-portal-lock > span { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 12px; background: #8a6708; color: #fff; font-size: 12px; font-weight: 800; }
+.rebate-portal-lock b,.rebate-portal-lock p { display: block; }
+.rebate-portal-lock p { margin: 4px 0 0; color: var(--muted, #607066); font-size: 12px; line-height: 1.55; }
+.rebate-portal-lock button { white-space: nowrap; }
 .rebate-band-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.rebate-band-grid.locked { opacity: .68; }
 .rebate-band { position: relative; padding: 20px; border: 1px solid #cbded1; border-radius: 16px; background: rgba(255, 255, 255, .9); color: var(--text, #13251a); text-align: left; cursor: pointer; transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease; }
 .rebate-band:hover { transform: translateY(-1px); border-color: #6da481; box-shadow: 0 10px 24px rgba(34, 91, 55, .08); }
+.rebate-band:disabled { cursor: not-allowed; }
+.rebate-band:disabled:hover { transform: none; box-shadow: none; }
 .rebate-band.active { border: 2px solid #2f7250; background: #f5fbf7; box-shadow: 0 0 0 3px rgba(47, 114, 80, .11); }
 .rebate-band.requires-review { border-color: #dfcc8d; background: linear-gradient(145deg, #fff9e8, #fff); }
 .rebate-band.requires-review.active { border-color: #9b7200; box-shadow: 0 0 0 3px rgba(181, 132, 0, .12); }
@@ -112,6 +120,8 @@
   .rebate-flow { grid-template-columns: 1fr; }
   .supplier-rebate-portal { padding: 16px; }
   .supplier-rebate-portal .supplier-commission-section-head { align-items: flex-start; }
+  .rebate-portal-lock { grid-template-columns: auto 1fr; }
+  .rebate-portal-lock button { grid-column: 1 / -1; width: 100%; }
   .rebate-band-grid { grid-template-columns: 1fr; }
   .rebate-order-preview { grid-template-columns: 1fr; }
   .rebate-order-preview div:last-child { grid-column: auto; }

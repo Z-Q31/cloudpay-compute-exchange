@@ -27,7 +27,22 @@
 
     <section class="supplier-gate" aria-labelledby="supplierGateTitle">
       <div><span class="supplier-gate-dot" aria-hidden="true"></span><div><small>企业供应商状态</small><b id="workbenchSupplierState">正在读取账户状态</b><p id="workbenchSupplierHint">只有已认证企业供应商可以提交上架审核。</p></div></div>
-      <button class="secondary" type="button" data-supplier-assessment>去认证与资源验真</button>
+      <button class="secondary" type="button" data-supplier-assessment>进入供应商认证</button>
+    </section>
+
+    <section class="supplier-certification-entry" id="supplierCertificationEntry" data-state="pending" aria-labelledby="supplierCertificationTitle">
+      <div class="supplier-certification-mark">认证</div>
+      <div class="supplier-certification-copy">
+        <small>SUPPLIER CERTIFICATION</small>
+        <h2 id="supplierCertificationTitle">供应商认证入口</h2>
+        <p id="supplierCertificationDescription">普通企业账号也可以申请。先完成企业主体认证，审核通过后再提交返佣材料、资源验真和上架申请。</p>
+        <div class="supplier-certification-steps"><span><i>1</i>填写企业主体</span><span><i>2</i>平台审核认证</span><span><i>3</i>提交返佣材料</span></div>
+      </div>
+      <div class="supplier-certification-actions">
+        <b id="supplierCertificationStatus">等待认证</b>
+        <button class="primary" type="button" id="supplierCertificationAction">开始供应商认证</button>
+        <button class="secondary" type="button" id="supplierRebateMaterialsAction" hidden>进入返佣材料提交</button>
+      </div>
     </section>
 
     <section class="supplier-kpis" aria-label="供应商经营概览">
@@ -173,6 +188,7 @@
   let activeKind = 'gpu';
   let marketReference = null;
   let supplierCertified = false;
+  let supplierIdentity = null;
   let editingDraftId = null;
   let supplierCsrf = '';
   let supplierData = { intakes: [], listings: [], orders: [], settlements: [] };
@@ -462,8 +478,61 @@
 
   function openAssessment() {
     const assessment = document.querySelector('.nav-item[data-view="assessment"]');
-    if (assessment) assessment.click();
+    if (assessment) {
+      assessment.click();
+      setTimeout(() => document.querySelector('.enterprise-gate')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+    }
     else if (typeof toast === 'function') toast('供应商评估模块正在加载，请稍后重试');
+  }
+
+  function openCertification() {
+    if (!supplierIdentity) {
+      document.querySelector('.account')?.click();
+      if (typeof toast === 'function') toast('请先登录企业账户再申请供应商认证');
+      return;
+    }
+    openAssessment();
+  }
+
+  function openRebateMaterials() {
+    const rebate = document.querySelector('.nav-item[data-view="supplierCommission"]');
+    if (!rebate) return;
+    rebate.click();
+    setTimeout(() => document.querySelector('#supplierEntranceButton')?.click(), 180);
+  }
+
+  function renderCertificationEntry(status = 'unverified') {
+    const entry = $('#supplierCertificationEntry');
+    const state = $('#supplierCertificationStatus');
+    const action = $('#supplierCertificationAction');
+    const materials = $('#supplierRebateMaterialsAction');
+    const copy = $('#supplierCertificationDescription');
+    entry.dataset.state = supplierCertified ? 'certified' : status === 'reviewing' ? 'reviewing' : 'pending';
+    action.hidden = false;
+    action.disabled = false;
+    materials.hidden = true;
+    if (!supplierIdentity) {
+      state.textContent = '登录后申请';
+      action.textContent = '登录并申请认证';
+      copy.textContent = '所有企业账号都可以查看供应商业务内容；登录后从这里提交企业主体认证。';
+      return;
+    }
+    if (supplierCertified) {
+      state.textContent = '认证已通过';
+      action.textContent = '查看认证信息';
+      materials.hidden = false;
+      copy.textContent = '企业供应商认证已通过，可以提交返佣交易材料、资源验真和上架申请。';
+      return;
+    }
+    if (status === 'reviewing') {
+      state.textContent = '平台审核中';
+      action.textContent = '查看认证进度';
+      copy.textContent = '认证材料已经提交。平台审核通过后，返佣材料提交入口会自动开放。';
+      return;
+    }
+    state.textContent = status === 'restricted' || status === 'paused' ? '需要复核' : '尚未认证';
+    action.textContent = status === 'restricted' || status === 'paused' ? '查看并补充认证' : '开始供应商认证';
+    copy.textContent = '普通企业账号也可以申请。先完成企业主体认证，审核通过后再提交返佣材料、资源验真和上架申请。';
   }
 
   function setDefaultDates() {
@@ -536,16 +605,22 @@
       const response = await fetch('/api/auth/me', { credentials: 'same-origin', cache: 'no-store' });
       const payload = await response.json();
       if (!payload.authenticated) {
+        supplierIdentity = null;
+        supplierCertified = false;
         state.textContent = '未登录';
         hint.textContent = '登录企业账户后可读取认证状态和容量账本。';
+        $('.supplier-gate').dataset.state = 'pending';
+        renderCertificationEntry();
         return;
       }
+      supplierIdentity = payload.user;
       supplierCsrf = payload.csrf_token || '';
-      const statusLabels = { unverified: '待企业认证', reviewing: '认证审核中', certified: '已认证', restricted: '受限', paused: '已暂停', exited: '已退出' };
+      const statusLabels = { unverified: '待供应商认证', verified: '企业账户已核验 · 待供应商认证', reviewing: '供应商认证审核中', certified: '供应商已认证', restricted: '供应商权限受限', paused: '供应商权限已暂停', exited: '已退出' };
       supplierCertified = payload.user.enterprise_status === 'certified' && payload.user.role === 'supplier';
       state.textContent = statusLabels[payload.user.enterprise_status] || payload.user.enterprise_status;
-      hint.textContent = supplierCertified ? '已开放资源存入、上架和交付权限。' : '完成企业认证与资源验真后才可提交上架审核。';
+      hint.textContent = supplierCertified ? '已开放返佣材料、资源存入、上架和交付权限。' : '完成供应商认证后，才可提交返佣材料、资源验真和上架审核。';
       $('.supplier-gate').dataset.state = supplierCertified ? 'certified' : 'pending';
+      renderCertificationEntry(payload.user.enterprise_status);
       if (payload.user.role === 'supplier' || payload.user.role === 'supplier_pending') {
         supplierData = await supplierApi('/api/supplier/workbench');
         renderSupplierData();
@@ -559,6 +634,8 @@
   $$('[data-supplier-tab]').forEach(button => button.addEventListener('click', () => switchTab(button.dataset.supplierTab)));
   $$('[data-supplier-open-kind]').forEach(button => button.addEventListener('click', () => openKind(button.dataset.supplierOpenKind)));
   $$('[data-supplier-assessment]').forEach(button => button.addEventListener('click', openAssessment));
+  $('#supplierCertificationAction').addEventListener('click', openCertification);
+  $('#supplierRebateMaterialsAction').addEventListener('click', openRebateMaterials);
   $$('[data-listing-kind]').forEach(button => button.addEventListener('click', () => setKind(button.dataset.listingKind)));
   $('#supplierTokenPriceType').addEventListener('change', () => { updateTokenUnit(); updatePreview(); });
   $('#supplierRegion').addEventListener('change', () => { updatePreview(); refreshReferencePrice(); });
@@ -614,5 +691,7 @@
   setDefaultDates();
   setKind('gpu');
   renderDrafts();
+  navButton.addEventListener('click', syncSupplierAccount);
+  window.addEventListener('kai:auth-changed', syncSupplierAccount);
   syncSupplierAccount();
 })();

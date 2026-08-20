@@ -26,15 +26,18 @@
     </section>
 
     <section class="rebate-flow" aria-label="返佣流程">
-      <article><i>1</i><div><b>点击供应商入口</b><span>只有已认证供应商可进入申报页面</span></div></article>
-      <article><i>2</i><div><b>选择金额区间</b><span>选择 5 万元及以下或 5 万元以上</span></div></article>
+      <article><i>1</i><div><b>所有账号查看规则</b><span>返佣比例、金额区间和审核规则完全公开</span></div></article>
+      <article><i>2</i><div><b>完成供应商认证</b><span>从供应商工作台提交企业主体认证</span></div></article>
       <article><i>3</i><div><b>提交真实交易内容</b><span>关联本人已验收订单，由系统校验金额和卡时</span></div></article>
       <article><i>4</i><div><b>返佣或平台审核</b><span>5 万元及以下直接返卡时，以上进入审核</span></div></article>
     </section>
 
     <section class="supplier-rebate-portal" id="supplierRebatePortal" hidden>
       <div class="supplier-commission-section-head"><div><span class="eyebrow">SUPPLIER SUBMISSION</span><h2>提交供应商返佣</h2><p>先选择金额区间，再从本人已验收的订单中选择交易。每笔订单只能申报一次。</p></div><button class="secondary supplier-portal-close" type="button" id="supplierPortalClose">收起入口</button></div>
-      <div class="rebate-band-grid" role="group" aria-label="选择订单金额区间">
+      <div class="rebate-portal-lock" id="rebatePortalLock" hidden>
+        <span>认证</span><div><b>供应商认证通过后开放材料提交</b><p>所有账号都能查看本页完整返佣内容；只有已认证供应商可以关联真实订单并提交交易材料。</p></div><button class="primary" type="button" id="rebateGoCertification">前往供应商认证</button>
+      </div>
+      <div class="rebate-band-grid" id="rebateBandGrid" role="group" aria-label="选择订单金额区间">
         <button type="button" class="rebate-band" data-rebate-band="up_to_50000"><small>自动返佣通道</small><b>5 万元及以下</b><span>提交交易内容后，返佣卡时直接进入供应商算力库</span></button>
         <button type="button" class="rebate-band requires-review" data-rebate-band="over_50000"><small>平台审核通道</small><b>5 万元以上</b><span>统一按 0.2% 计算，提交后等待平台审核</span></button>
       </div>
@@ -170,8 +173,9 @@
     const form = $('#rebateSubmissionForm');
     view.querySelectorAll('[data-rebate-band]').forEach(button => {
       button.classList.toggle('active', button.dataset.rebateBand === selectedBand);
+      button.disabled = !overview.eligible;
     });
-    if (!selectedBand) {
+    if (!overview.eligible || !selectedBand) {
       form.hidden = true;
       return;
     }
@@ -194,15 +198,17 @@
     const summary = overview.summary || {};
     $('#supplierAccountData').hidden = !eligible;
     $('#adminRebateReview').hidden = identity?.role !== 'admin';
-    $('#supplierRebatePortal').hidden = !(eligible && portalOpen);
+    $('#supplierRebatePortal').hidden = !(identity && identity.role !== 'admin' && portalOpen);
+    $('#rebatePortalLock').hidden = eligible;
+    $('#rebateBandGrid').classList.toggle('locked', !eligible);
     $('#rebateIneligible').hidden = true;
+    renderSubmissionForm();
     if (eligible) {
       $('#rebateSourceHours').textContent = hours(summary.source_card_hours);
       $('#rebateIssuedHours').textContent = hours(summary.issued_card_hours);
       $('#rebatePendingHours').textContent = hours(summary.pending_review_card_hours);
       $('#rebateOrderCount').textContent = String(summary.order_count || 0);
       renderSupplierRows(overview.rebates || []);
-      renderSubmissionForm();
     }
     if (identity?.role === 'admin') renderAdminRows(adminOverview?.supplier_rebates || []);
   }
@@ -234,7 +240,7 @@
       $('#supplierCommissionHint').textContent = overview.eligible
         ? `有 ${(overview.eligible_orders || []).length} 笔已验收订单可申报返佣。`
         : identity.role === 'admin' ? '可在本页审核 5 万元以上的供应商返佣。' : '规则可查看，完成供应商认证后可进入申报。';
-      $('#supplierEntranceButton').textContent = overview.eligible ? '进入供应商返佣' : identity.role === 'admin' ? '查看平台审核' : '供应商入口';
+      $('#supplierEntranceButton').textContent = overview.eligible ? '进入返佣材料提交' : identity.role === 'admin' ? '查看平台审核' : '查看返佣与认证入口';
       gate.dataset.state = 'ready';
       render();
     } catch (error) {
@@ -297,18 +303,13 @@
       document.querySelector('.account')?.click();
       return;
     }
-    if (overview.eligible) {
-      portalOpen = true;
-      render();
-      $('#supplierRebatePortal').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
     if (identity.role === 'admin') {
       $('#adminRebateReview').scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
-    $('#rebateIneligible').hidden = false;
-    $('#rebateIneligible').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    portalOpen = true;
+    render();
+    $('#supplierRebatePortal').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   $('#supplierPortalClose').addEventListener('click', () => {
     portalOpen = false;
@@ -323,8 +324,13 @@
   });
   $('#rebateOrderSelect').addEventListener('change', renderOrderPreview);
   $('#rebateSubmissionForm').addEventListener('submit', submitRebate);
+  $('#rebateGoCertification').addEventListener('click', () => {
+    document.querySelector('.nav-item[data-view="supplier"]')?.click();
+    setTimeout(() => document.querySelector('#supplierCertificationEntry')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
+  });
   $('#goSupplierWorkbench').addEventListener('click', () => document.querySelector('.nav-item[data-view="supplier"]')?.click());
   navButton.addEventListener('click', sync);
+  window.addEventListener('kai:auth-changed', sync);
   if (new URL(location.href).searchParams.get('view') === 'supplierCommission') {
     setTimeout(() => navButton.click(), 0);
   } else {

@@ -55,6 +55,10 @@ PLATFORM_MODE = os.environ.get("KAI_PLATFORM_MODE", "marketplace").strip().lower
 ORDER_RESERVATION_MINUTES = max(5, int(os.environ.get("KAI_ORDER_RESERVATION_MINUTES", "30")))
 SETTLEMENT_HOLD_HOURS = max(0, int(os.environ.get("KAI_SETTLEMENT_HOLD_HOURS", "72")))
 PLATFORM_FEE_BPS = min(5000, max(0, int(os.environ.get("KAI_PLATFORM_FEE_BPS", "500"))))
+SUPPLIER_REFERRAL_DEFAULT_BPS = min(2000, max(100, int(os.environ.get("KAI_SUPPLIER_REFERRAL_DEFAULT_BPS", "800"))))
+SUPPLIER_REFERRAL_MAX_CENTS = max(100, int(os.environ.get("KAI_SUPPLIER_REFERRAL_MAX_CENTS", "50000")))
+SUPPLIER_REFERRAL_WINDOW_DAYS = max(1, min(90, int(os.environ.get("KAI_SUPPLIER_REFERRAL_WINDOW_DAYS", "30"))))
+SUPPLIER_REFERRAL_HOLD_DAYS = max(1, min(90, int(os.environ.get("KAI_SUPPLIER_REFERRAL_HOLD_DAYS", "7"))))
 METERING_TOLERANCE_RATIO = min(.25, max(0, float(os.environ.get("KAI_METERING_TOLERANCE_RATIO", ".02"))))
 WORKER_INTERVAL_SECONDS = max(5, int(os.environ.get("KAI_WORKER_INTERVAL_SECONDS", "30")))
 ADMIN_ACCOUNT = os.environ.get("KAI_ADMIN_ACCOUNT", "").strip().lower()
@@ -351,6 +355,7 @@ def integration_readiness() -> dict:
             "supplier_review": True, "resource_verification": True, "server_listings": True,
             "reservation_expiry": True, "supplier_delivery": True, "dual_source_metering": True,
             "disputes_and_refunds": True, "settlement_ledger": True, "invoice_workflow": True,
+            "supplier_referral_commission": True,
             "gpu_token_rack": True, "swap_rfq": True, "account_deletion_request": True,
         },
         "app_release": {
@@ -1054,6 +1059,36 @@ def initialize_database() -> None:
               currency TEXT NOT NULL, status TEXT NOT NULL, hold_until TEXT NOT NULL,
               payout_ref TEXT, paid_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS supplier_referral_programs(
+              supplier_user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+              commission_rate_bps INTEGER NOT NULL, status TEXT NOT NULL,
+              created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS supplier_referral_partners(
+              id TEXT PRIMARY KEY, supplier_user_id TEXT NOT NULL REFERENCES users(id),
+              partner_user_id TEXT NOT NULL REFERENCES users(id), commission_rate_bps INTEGER NOT NULL,
+              referral_code TEXT NOT NULL UNIQUE, status TEXT NOT NULL,
+              invited_at TEXT NOT NULL, accepted_at TEXT, rejected_at TEXT, updated_at TEXT NOT NULL,
+              UNIQUE(supplier_user_id,partner_user_id)
+            );
+            CREATE TABLE IF NOT EXISTS supplier_referral_attributions(
+              id TEXT PRIMARY KEY, buyer_user_id TEXT NOT NULL REFERENCES users(id),
+              supplier_user_id TEXT NOT NULL REFERENCES users(id),
+              partner_relation_id TEXT NOT NULL REFERENCES supplier_referral_partners(id),
+              status TEXT NOT NULL, attributed_at TEXT NOT NULL, expires_at TEXT NOT NULL,
+              locked_at TEXT, first_order_id TEXT REFERENCES orders(id), updated_at TEXT NOT NULL,
+              UNIQUE(buyer_user_id,supplier_user_id)
+            );
+            CREATE TABLE IF NOT EXISTS supplier_referral_commissions(
+              id TEXT PRIMARY KEY, supplier_user_id TEXT NOT NULL REFERENCES users(id),
+              partner_user_id TEXT NOT NULL REFERENCES users(id),
+              partner_relation_id TEXT NOT NULL REFERENCES supplier_referral_partners(id),
+              order_id TEXT NOT NULL UNIQUE REFERENCES orders(id), base_cents INTEGER NOT NULL,
+              commission_rate_bps INTEGER NOT NULL, amount_cents INTEGER NOT NULL,
+              currency TEXT NOT NULL, status TEXT NOT NULL, hold_until TEXT NOT NULL,
+              available_at TEXT, reversed_at TEXT, paid_at TEXT, payout_ref TEXT,
+              created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS invoice_requests(
               id TEXT PRIMARY KEY, order_id TEXT NOT NULL UNIQUE REFERENCES orders(id),
               requester_user_id TEXT NOT NULL REFERENCES users(id), invoice_title TEXT NOT NULL,
@@ -1092,6 +1127,11 @@ def initialize_database() -> None:
             CREATE INDEX IF NOT EXISTS idx_disputes_order ON disputes(order_id,status);
             CREATE INDEX IF NOT EXISTS idx_refunds_order ON refunds(order_id,status);
             CREATE INDEX IF NOT EXISTS idx_settlements_supplier ON settlements(supplier_user_id,status);
+            CREATE INDEX IF NOT EXISTS idx_supplier_referral_partners_supplier ON supplier_referral_partners(supplier_user_id,status);
+            CREATE INDEX IF NOT EXISTS idx_supplier_referral_partners_partner ON supplier_referral_partners(partner_user_id,status);
+            CREATE INDEX IF NOT EXISTS idx_supplier_referral_attribution_buyer ON supplier_referral_attributions(buyer_user_id,supplier_user_id,status);
+            CREATE INDEX IF NOT EXISTS idx_supplier_referral_commission_supplier ON supplier_referral_commissions(supplier_user_id,status);
+            CREATE INDEX IF NOT EXISTS idx_supplier_referral_commission_partner ON supplier_referral_commissions(partner_user_id,status);
             CREATE INDEX IF NOT EXISTS idx_swaps_requester ON swap_requests(requester_user_id,created_at DESC);
             """
         )
@@ -1128,6 +1168,7 @@ def initialize_database() -> None:
         add_column_if_missing(connection, "orders", "product_code", "TEXT")
         add_column_if_missing(connection, "orders", "settlement_mode", "TEXT NOT NULL DEFAULT 'cash'")
         add_column_if_missing(connection, "orders", "swap_id", "TEXT")
+        add_column_if_missing(connection, "settlements", "referral_commission_cents", "INTEGER NOT NULL DEFAULT 0")
         add_column_if_missing(connection, "allocations", "kind", "TEXT NOT NULL DEFAULT 'gpu'")
         add_column_if_missing(connection, "allocations", "product_code", "TEXT")
         add_column_if_missing(connection, "allocations", "provider", "TEXT")
@@ -1253,6 +1294,96 @@ def supplier_for_order(connection: sqlite3.Connection, order: sqlite3.Row) -> sq
     return supplier
 
 
+def ensure_supplier_referral_program(connection: sqlite3.Connection, supplier_user_id: str) -> sqlite3.Row:
+    created = now_iso()
+    connection.execute(
+        """INSERT OR IGNORE INTO supplier_referral_programs(
+           supplier_user_id,commission_rate_bps,status,created_at,updated_at
+           ) VALUES(?,?,'active',?,?)""",
+        (supplier_user_id, SUPPLIER_REFERRAL_DEFAULT_BPS, created, created),
+    )
+    return connection.execute(
+        "SELECT * FROM supplier_referral_programs WHERE supplier_user_id=?",
+        (supplier_user_id,),
+    ).fetchone()
+
+
+def next_supplier_referral_code(connection: sqlite3.Connection) -> str:
+    for _ in range(12):
+        code = f"KAI-SUP-{secrets.token_hex(4).upper()}"
+        exists = connection.execute(
+            "SELECT 1 FROM supplier_referral_partners WHERE referral_code=?",
+            (code,),
+        ).fetchone()
+        if not exists:
+            return code
+    raise ApiError(503, "暂时无法生成推广识别码，请稍后重试", "referral_code_unavailable")
+
+
+def create_supplier_referral_commission(
+    connection: sqlite3.Connection,
+    order: sqlite3.Row,
+    supplier_user_id: str,
+    accepted_at: str,
+) -> sqlite3.Row | None:
+    existing = connection.execute(
+        "SELECT * FROM supplier_referral_commissions WHERE order_id=?",
+        (order["id"],),
+    ).fetchone()
+    if existing:
+        return existing
+    attribution = connection.execute(
+        """SELECT a.*,p.partner_user_id,p.commission_rate_bps,p.status AS partner_status
+           FROM supplier_referral_attributions a
+           JOIN supplier_referral_partners p ON p.id=a.partner_relation_id
+           WHERE a.buyer_user_id=? AND a.supplier_user_id=? AND a.status='active'
+             AND a.expires_at>? AND p.status='active'
+           ORDER BY a.attributed_at DESC LIMIT 1""",
+        (order["buyer_user_id"], supplier_user_id, accepted_at),
+    ).fetchone()
+    if not attribution:
+        return None
+    if attribution["partner_user_id"] in (order["buyer_user_id"], supplier_user_id):
+        return None
+    rate_bps = int(attribution["commission_rate_bps"])
+    amount_cents = min(
+        SUPPLIER_REFERRAL_MAX_CENTS,
+        max(0, int(round(int(order["amount_cents"]) * rate_bps / 10000))),
+    )
+    if amount_cents <= 0:
+        return None
+    hold_until = (
+        datetime.now(timezone.utc) + timedelta(days=SUPPLIER_REFERRAL_HOLD_DAYS)
+    ).replace(microsecond=0).isoformat()
+    commission_id = uid("supcommission")
+    connection.execute(
+        """INSERT INTO supplier_referral_commissions(
+           id,supplier_user_id,partner_user_id,partner_relation_id,order_id,base_cents,
+           commission_rate_bps,amount_cents,currency,status,hold_until,created_at,updated_at
+           ) VALUES(?,?,?,?,?,?,?,?,?,'holding',?,?,?)""",
+        (
+            commission_id, supplier_user_id, attribution["partner_user_id"],
+            attribution["partner_relation_id"], order["id"], order["amount_cents"],
+            rate_bps, amount_cents, "CNY", hold_until, accepted_at, accepted_at,
+        ),
+    )
+    connection.execute(
+        """UPDATE supplier_referral_attributions
+           SET locked_at=COALESCE(locked_at,?),first_order_id=COALESCE(first_order_id,?),updated_at=?
+           WHERE id=?""",
+        (accepted_at, order["id"], accepted_at, attribution["id"]),
+    )
+    audit(connection, order["buyer_user_id"], "supplier_referral_commission", commission_id,
+          "supplier_referral.commission_holding", {
+              "order_id": order["id"], "supplier_user_id": supplier_user_id,
+              "partner_user_id": attribution["partner_user_id"], "amount_cents": amount_cents,
+              "commission_rate_bps": rate_bps, "hold_until": hold_until,
+          })
+    return connection.execute(
+        "SELECT * FROM supplier_referral_commissions WHERE id=?", (commission_id,)
+    ).fetchone()
+
+
 def release_order_capacity(connection: sqlite3.Connection, order: sqlite3.Row, source_status: str) -> None:
     counter = {
         "pending_payment": "quote_reserved",
@@ -1287,6 +1418,12 @@ def apply_refund_success(connection: sqlite3.Connection, refund: sqlite3.Row, pr
     connection.execute("UPDATE orders SET status='refunded',updated_at=? WHERE id=?", (updated, order["id"]))
     connection.execute("UPDATE payments SET status='refunded',updated_at=? WHERE id=?", (updated, refund["payment_id"]))
     connection.execute("UPDATE settlements SET status='reversed',updated_at=? WHERE order_id=? AND status!='paid'", (updated, order["id"]))
+    connection.execute(
+        """UPDATE supplier_referral_commissions
+           SET status=CASE WHEN status='paid' THEN 'clawback_required' ELSE 'reversed' END,
+               reversed_at=?,updated_at=? WHERE order_id=? AND status NOT IN ('reversed','clawback_required')""",
+        (updated, updated, order["id"]),
+    )
     audit(connection, actor_user_id, "refund", refund["id"], "refund.succeeded", {
         "order_id": order["id"], "amount_cents": refund["amount_cents"], "provider_ref": provider_ref,
     })
@@ -1312,7 +1449,7 @@ def metering_reconciliation(connection: sqlite3.Connection, order_id: str) -> di
 
 
 def run_maintenance_cycle() -> dict:
-    expired = payable = delivered = swap_quotes_expired = 0
+    expired = payable = delivered = swap_quotes_expired = referral_available = 0
     moment = now_iso()
     with db_connect() as connection:
         connection.execute("BEGIN IMMEDIATE")
@@ -1352,6 +1489,24 @@ def run_maintenance_cycle() -> dict:
                     "order_id": settlement["order_id"], "supplier_net_cents": settlement["supplier_net_cents"],
                 })
                 payable += 1
+            commission_rows = connection.execute(
+                """SELECT c.* FROM supplier_referral_commissions c
+                   JOIN settlements s ON s.order_id=c.order_id
+                   WHERE c.status='holding' AND c.hold_until<=? AND s.status IN ('payable','paid')
+                   AND NOT EXISTS(SELECT 1 FROM disputes d WHERE d.order_id=c.order_id AND d.status IN ('open','reviewing'))
+                   AND NOT EXISTS(SELECT 1 FROM refunds r WHERE r.order_id=c.order_id AND r.status IN ('pending_review','approved','processing','success'))""",
+                (moment,),
+            ).fetchall()
+            for commission in commission_rows:
+                connection.execute(
+                    "UPDATE supplier_referral_commissions SET status='available',available_at=?,updated_at=? WHERE id=?",
+                    (moment, moment, commission["id"]),
+                )
+                audit(connection, None, "supplier_referral_commission", commission["id"],
+                      "supplier_referral.commission_available", {
+                          "order_id": commission["order_id"], "amount_cents": commission["amount_cents"],
+                      })
+                referral_available += 1
             events = connection.execute("SELECT * FROM outbox WHERE status='pending' ORDER BY sequence LIMIT 200").fetchall()
             for event in events:
                 connection.execute(
@@ -1367,7 +1522,11 @@ def run_maintenance_cycle() -> dict:
         except Exception:
             connection.execute("ROLLBACK")
             raise
-    return {"expired_orders": expired, "expired_swap_quotes": swap_quotes_expired, "payable_settlements": payable, "processed_events": delivered}
+    return {
+        "expired_orders": expired, "expired_swap_quotes": swap_quotes_expired,
+        "payable_settlements": payable, "available_supplier_commissions": referral_available,
+        "processed_events": delivered,
+    }
 
 
 def maintenance_worker(stop_event: threading.Event) -> None:
@@ -1522,6 +1681,8 @@ class KaiHandler(BaseHTTPRequestHandler):
                 return self.get_recent_audit()
             if path == "/api/supplier/workbench":
                 return self.get_supplier_workbench()
+            if path == "/api/supplier-referral/overview":
+                return self.get_supplier_referral_overview()
             if path == "/api/admin/overview":
                 return self.get_admin_overview()
             if path == "/api/cases":
@@ -1568,6 +1729,12 @@ class KaiHandler(BaseHTTPRequestHandler):
                 return self.create_resource_intake()
             if path == "/api/supplier/listings":
                 return self.create_supplier_listing()
+            if path == "/api/supplier-referral/program":
+                return self.update_supplier_referral_program()
+            if path == "/api/supplier-referral/invitations":
+                return self.create_supplier_referral_invitation()
+            if path == "/api/supplier-referral/claim":
+                return self.claim_supplier_referral()
             if path == "/api/withdrawals":
                 return self.create_withdrawal()
             if path == "/api/orders":
@@ -1609,6 +1776,13 @@ class KaiHandler(BaseHTTPRequestHandler):
             supplier_deliver_match = re.fullmatch(r"/api/supplier/orders/([^/]+)/deliver", path)
             if supplier_deliver_match:
                 return self.supplier_deliver_order(supplier_deliver_match.group(1))
+            referral_invitation_match = re.fullmatch(
+                r"/api/supplier-referral/invitations/([^/]+)/(accept|reject)", path
+            )
+            if referral_invitation_match:
+                return self.resolve_supplier_referral_invitation(
+                    referral_invitation_match.group(1), referral_invitation_match.group(2)
+                )
             accept_match = re.fullmatch(r"/api/orders/([^/]+)/accept", path)
             if accept_match:
                 return self.accept_order(accept_match.group(1))
@@ -1633,6 +1807,9 @@ class KaiHandler(BaseHTTPRequestHandler):
             settlement_paid_match = re.fullmatch(r"/api/admin/settlements/([^/]+)/mark-paid", path)
             if settlement_paid_match:
                 return self.admin_mark_settlement_paid(settlement_paid_match.group(1))
+            referral_paid_match = re.fullmatch(r"/api/admin/supplier-commissions/([^/]+)/mark-paid", path)
+            if referral_paid_match:
+                return self.admin_mark_supplier_commission_paid(referral_paid_match.group(1))
             invoice_issue_match = re.fullmatch(r"/api/admin/invoices/([^/]+)/issue", path)
             if invoice_issue_match:
                 return self.admin_issue_invoice(invoice_issue_match.group(1))
@@ -2417,6 +2594,261 @@ class KaiHandler(BaseHTTPRequestHandler):
             "settlements": [dict(row) for row in settlements],
         })
 
+    def get_supplier_referral_overview(self) -> None:
+        session = self.session()
+        with db_connect() as connection:
+            program = None
+            supplier_partners = []
+            supplier_commissions = []
+            if session["role"] == "supplier" and session["enterprise_status"] == "certified":
+                program = ensure_supplier_referral_program(connection, session["user_id"])
+                supplier_partners = connection.execute(
+                    """SELECT p.*,u.name AS partner_name,u.account AS partner_account
+                       FROM supplier_referral_partners p JOIN users u ON u.id=p.partner_user_id
+                       WHERE p.supplier_user_id=? ORDER BY p.invited_at DESC LIMIT 200""",
+                    (session["user_id"],),
+                ).fetchall()
+                supplier_commissions = connection.execute(
+                    """SELECT c.*,u.name AS partner_name,o.order_no
+                       FROM supplier_referral_commissions c
+                       JOIN users u ON u.id=c.partner_user_id JOIN orders o ON o.id=c.order_id
+                       WHERE c.supplier_user_id=? ORDER BY c.created_at DESC LIMIT 200""",
+                    (session["user_id"],),
+                ).fetchall()
+            invitations = connection.execute(
+                """SELECT p.*,u.name AS supplier_name
+                   FROM supplier_referral_partners p JOIN users u ON u.id=p.supplier_user_id
+                   WHERE p.partner_user_id=? AND p.status='pending_confirmation'
+                   ORDER BY p.invited_at DESC""",
+                (session["user_id"],),
+            ).fetchall()
+            partnerships = connection.execute(
+                """SELECT p.*,u.name AS supplier_name
+                   FROM supplier_referral_partners p JOIN users u ON u.id=p.supplier_user_id
+                   WHERE p.partner_user_id=? AND p.status='active' ORDER BY p.accepted_at DESC""",
+                (session["user_id"],),
+            ).fetchall()
+            partner_commissions = connection.execute(
+                """SELECT c.*,u.name AS supplier_name,o.order_no
+                   FROM supplier_referral_commissions c
+                   JOIN users u ON u.id=c.supplier_user_id JOIN orders o ON o.id=c.order_id
+                   WHERE c.partner_user_id=? ORDER BY c.created_at DESC LIMIT 200""",
+                (session["user_id"],),
+            ).fetchall()
+
+        def commission_summary(rows: list[sqlite3.Row]) -> dict:
+            return {
+                "holding_cents": sum(row["amount_cents"] for row in rows if row["status"] in ("holding", "paused")),
+                "available_cents": sum(row["amount_cents"] for row in rows if row["status"] == "available"),
+                "paid_cents": sum(row["amount_cents"] for row in rows if row["status"] == "paid"),
+                "reversed_cents": sum(row["amount_cents"] for row in rows if row["status"] in ("reversed", "clawback_required")),
+            }
+
+        self.json_response(200, {
+            "ok": True,
+            "viewer": {"user_id": session["user_id"], "role": session["role"], "enterprise_status": session["enterprise_status"]},
+            "supplier": {
+                "enabled": program is not None,
+                "program": dict(program) if program else None,
+                "partners": [dict(row) for row in supplier_partners],
+                "commissions": [dict(row) for row in supplier_commissions],
+                "summary": commission_summary(supplier_commissions),
+            },
+            "partner": {
+                "invitations": [dict(row) for row in invitations],
+                "partnerships": [dict(row) for row in partnerships],
+                "commissions": [dict(row) for row in partner_commissions],
+                "summary": commission_summary(partner_commissions),
+            },
+            "policy": {
+                "default_rate_bps": SUPPLIER_REFERRAL_DEFAULT_BPS,
+                "maximum_commission_cents": SUPPLIER_REFERRAL_MAX_CENTS,
+                "attribution_window_days": SUPPLIER_REFERRAL_WINDOW_DAYS,
+                "hold_days": SUPPLIER_REFERRAL_HOLD_DAYS,
+            },
+        })
+
+    def update_supplier_referral_program(self) -> None:
+        session = self.session(csrf=True)
+        require_role(session, "supplier")
+        if session["enterprise_status"] != "certified":
+            raise ApiError(403, "仅已认证供应商可以开启返佣计划", "supplier_not_certified")
+        data = self.read_json()
+        try:
+            rate_percent = float(data.get("commission_rate_percent"))
+        except (TypeError, ValueError):
+            raise ApiError(422, "返佣比例无效", "invalid_commission_rate")
+        rate_bps = int(round(rate_percent * 100))
+        if rate_bps < 100 or rate_bps > 2000:
+            raise ApiError(422, "返佣比例必须在 1% 至 20% 之间", "invalid_commission_rate")
+        status = clean_text(data.get("status") or "active", "计划状态", 4, 20)
+        if status not in ("active", "paused"):
+            raise ApiError(422, "返佣计划状态无效")
+        updated = now_iso()
+        with db_connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                ensure_supplier_referral_program(connection, session["user_id"])
+                connection.execute(
+                    """UPDATE supplier_referral_programs SET commission_rate_bps=?,status=?,updated_at=?
+                       WHERE supplier_user_id=?""",
+                    (rate_bps, status, updated, session["user_id"]),
+                )
+                audit(connection, session["user_id"], "supplier_referral_program", session["user_id"],
+                      "supplier_referral.program_updated", {"commission_rate_bps": rate_bps, "status": status})
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+            program = connection.execute(
+                "SELECT * FROM supplier_referral_programs WHERE supplier_user_id=?", (session["user_id"],)
+            ).fetchone()
+        self.json_response(200, {"ok": True, "program": dict(program)})
+
+    def create_supplier_referral_invitation(self) -> None:
+        session = self.session(csrf=True)
+        require_role(session, "supplier")
+        if session["enterprise_status"] != "certified":
+            raise ApiError(403, "仅已认证供应商可以邀请推广伙伴", "supplier_not_certified")
+        self.rate_limit(f"supplier-referral-invite:{session['user_id']}", 20, 3600)
+        data = self.read_json()
+        partner_account = clean_text(data.get("partner_account"), "推广伙伴账户", 3, 160).lower()
+        invited_at = now_iso()
+        with db_connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                program = ensure_supplier_referral_program(connection, session["user_id"])
+                if program["status"] != "active":
+                    raise ApiError(409, "返佣计划已暂停，请先恢复计划")
+                partner = connection.execute(
+                    "SELECT * FROM users WHERE lower(account)=? AND lifecycle_status='active'",
+                    (partner_account,),
+                ).fetchone()
+                if not partner:
+                    raise ApiError(404, "推广伙伴账户不存在", "partner_not_found")
+                if partner["id"] == session["user_id"]:
+                    raise ApiError(422, "不能邀请自己的账户")
+                existing = connection.execute(
+                    "SELECT * FROM supplier_referral_partners WHERE supplier_user_id=? AND partner_user_id=?",
+                    (session["user_id"], partner["id"]),
+                ).fetchone()
+                if existing and existing["status"] in ("pending_confirmation", "active"):
+                    raise ApiError(409, "该账户已有待确认邀请或已是推广伙伴", "partner_relation_exists")
+                code = next_supplier_referral_code(connection)
+                if existing:
+                    relation_id = existing["id"]
+                    connection.execute(
+                        """UPDATE supplier_referral_partners SET commission_rate_bps=?,referral_code=?,
+                           status='pending_confirmation',invited_at=?,accepted_at=NULL,rejected_at=NULL,updated_at=? WHERE id=?""",
+                        (program["commission_rate_bps"], code, invited_at, invited_at, relation_id),
+                    )
+                else:
+                    relation_id = uid("suppartner")
+                    connection.execute(
+                        """INSERT INTO supplier_referral_partners(
+                           id,supplier_user_id,partner_user_id,commission_rate_bps,referral_code,status,invited_at,updated_at
+                           ) VALUES(?,?,?,?,?,'pending_confirmation',?,?)""",
+                        (relation_id, session["user_id"], partner["id"], program["commission_rate_bps"], code, invited_at, invited_at),
+                    )
+                audit(connection, session["user_id"], "supplier_referral_partner", relation_id,
+                      "supplier_referral.invited", {"partner_user_id": partner["id"], "commission_rate_bps": program["commission_rate_bps"]})
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+            invitation = connection.execute(
+                "SELECT * FROM supplier_referral_partners WHERE id=?", (relation_id,)
+            ).fetchone()
+        self.json_response(201, {"ok": True, "invitation": dict(invitation)})
+
+    def resolve_supplier_referral_invitation(self, relation_id: str, action: str) -> None:
+        session = self.session(csrf=True)
+        resolved_at = now_iso()
+        with db_connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                relation = connection.execute(
+                    "SELECT * FROM supplier_referral_partners WHERE id=?", (relation_id,)
+                ).fetchone()
+                if not relation or relation["partner_user_id"] != session["user_id"]:
+                    raise ApiError(404, "返佣邀请不存在", "invitation_not_found")
+                if relation["status"] != "pending_confirmation":
+                    raise ApiError(409, "返佣邀请已经处理", "invitation_already_resolved")
+                status = "active" if action == "accept" else "rejected"
+                connection.execute(
+                    """UPDATE supplier_referral_partners SET status=?,accepted_at=?,rejected_at=?,updated_at=? WHERE id=?""",
+                    (status, resolved_at if action == "accept" else None,
+                     resolved_at if action == "reject" else None, resolved_at, relation_id),
+                )
+                audit(connection, session["user_id"], "supplier_referral_partner", relation_id,
+                      f"supplier_referral.invitation_{action}ed", {"supplier_user_id": relation["supplier_user_id"]})
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+            updated = connection.execute(
+                "SELECT * FROM supplier_referral_partners WHERE id=?", (relation_id,)
+            ).fetchone()
+        self.json_response(200, {"ok": True, "partnership": dict(updated)})
+
+    def claim_supplier_referral(self) -> None:
+        session = self.session(csrf=True)
+        data = self.read_json()
+        referral_code = clean_text(data.get("referral_code"), "供应商推荐码", 8, 80).upper()
+        attributed_at = now_iso()
+        expires_at = (
+            datetime.now(timezone.utc) + timedelta(days=SUPPLIER_REFERRAL_WINDOW_DAYS)
+        ).replace(microsecond=0).isoformat()
+        with db_connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                relation = connection.execute(
+                    """SELECT p.*,u.name AS supplier_name,u.enterprise_status
+                       FROM supplier_referral_partners p JOIN users u ON u.id=p.supplier_user_id
+                       JOIN supplier_referral_programs g ON g.supplier_user_id=p.supplier_user_id
+                       WHERE p.referral_code=? AND p.status='active' AND g.status='active'""",
+                    (referral_code,),
+                ).fetchone()
+                if not relation or relation["enterprise_status"] != "certified":
+                    raise ApiError(404, "供应商推荐码无效或已暂停", "referral_code_invalid")
+                if session["user_id"] in (relation["supplier_user_id"], relation["partner_user_id"]):
+                    raise ApiError(422, "不能对自己的推荐关系进行归因", "self_referral_blocked")
+                existing = connection.execute(
+                    """SELECT * FROM supplier_referral_attributions
+                       WHERE buyer_user_id=? AND supplier_user_id=?""",
+                    (session["user_id"], relation["supplier_user_id"]),
+                ).fetchone()
+                if existing and existing["locked_at"]:
+                    if existing["partner_relation_id"] != relation["id"]:
+                        raise ApiError(409, "该供应商的推荐关系已随首笔合格订单锁定", "attribution_locked")
+                    connection.execute("COMMIT")
+                    return self.json_response(200, {"ok": True, "attribution": dict(existing), "idempotent_replay": True})
+                if existing:
+                    attribution_id = existing["id"]
+                    connection.execute(
+                        """UPDATE supplier_referral_attributions SET partner_relation_id=?,status='active',
+                           attributed_at=?,expires_at=?,updated_at=? WHERE id=?""",
+                        (relation["id"], attributed_at, expires_at, attributed_at, attribution_id),
+                    )
+                else:
+                    attribution_id = uid("supattrib")
+                    connection.execute(
+                        """INSERT INTO supplier_referral_attributions(
+                           id,buyer_user_id,supplier_user_id,partner_relation_id,status,attributed_at,expires_at,updated_at
+                           ) VALUES(?,?,?,?,'active',?,?,?)""",
+                        (attribution_id, session["user_id"], relation["supplier_user_id"], relation["id"], attributed_at, expires_at, attributed_at),
+                    )
+                audit(connection, session["user_id"], "supplier_referral_attribution", attribution_id,
+                      "supplier_referral.attributed", {"supplier_user_id": relation["supplier_user_id"], "partner_relation_id": relation["id"], "expires_at": expires_at})
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+            attribution = connection.execute(
+                "SELECT * FROM supplier_referral_attributions WHERE id=?", (attribution_id,)
+            ).fetchone()
+        self.json_response(200, {"ok": True, "attribution": dict(attribution), "supplier_name": relation["supplier_name"]})
+
     def get_admin_overview(self) -> None:
         session = self.session()
         require_role(session, "admin")
@@ -2442,6 +2874,14 @@ class KaiHandler(BaseHTTPRequestHandler):
             settlements = connection.execute(
                 "SELECT * FROM settlements WHERE status IN ('holding','payable') ORDER BY created_at"
             ).fetchall()
+            supplier_commissions = connection.execute(
+                """SELECT c.*,s.name AS supplier_name,p.name AS partner_name,o.order_no
+                   FROM supplier_referral_commissions c
+                   JOIN users s ON s.id=c.supplier_user_id JOIN users p ON p.id=c.partner_user_id
+                   JOIN orders o ON o.id=c.order_id
+                   WHERE c.status IN ('holding','available','paused','clawback_required')
+                   ORDER BY c.created_at"""
+            ).fetchall()
             invoices = connection.execute(
                 "SELECT * FROM invoice_requests WHERE status='requested' ORDER BY created_at"
             ).fetchall()
@@ -2462,6 +2902,7 @@ class KaiHandler(BaseHTTPRequestHandler):
                 "pending_supplier_reviews": len(applications), "pending_intakes": len(intakes),
                 "pending_listings": len(listings), "open_disputes": len(disputes),
                 "pending_refunds": len(refunds), "pending_settlements": len(settlements),
+                "pending_supplier_commissions": len(supplier_commissions),
                 "pending_invoices": len(invoices),
                 "pending_gateway_metering": len(metering_orders),
                 "pending_swaps": len(swaps), "pending_account_deletions": len(account_deletions),
@@ -2472,6 +2913,7 @@ class KaiHandler(BaseHTTPRequestHandler):
             "applications": [dict(row) for row in applications], "intakes": [dict(row) for row in intakes],
             "listings": [dict(row) for row in listings], "disputes": [dict(row) for row in disputes],
             "refunds": [dict(row) for row in refunds], "settlements": [dict(row) for row in settlements],
+            "supplier_commissions": [dict(row) for row in supplier_commissions],
             "invoices": [dict(row) for row in invoices], "metering_orders": [order_dict(row) | {"supplier_name": row["supplier_name"]} for row in metering_orders],
             "swaps": [dict(row) for row in swaps], "account_deletions": [dict(row) for row in account_deletions],
         })
@@ -3118,17 +3560,24 @@ class KaiHandler(BaseHTTPRequestHandler):
                     })
                 if settlement_mode == "cash":
                     platform_fee = int(round(order["amount_cents"] * PLATFORM_FEE_BPS / 10000))
-                    supplier_net = order["amount_cents"] - platform_fee
+                    referral_commission = create_supplier_referral_commission(
+                        connection, order, supplier["id"], accepted_at
+                    )
+                    referral_commission_cents = referral_commission["amount_cents"] if referral_commission else 0
+                    supplier_net = order["amount_cents"] - platform_fee - referral_commission_cents
                     hold_until = (datetime.now(timezone.utc) + timedelta(hours=SETTLEMENT_HOLD_HOURS)).replace(microsecond=0).isoformat()
                     settlement_id = uid("settlement")
                     connection.execute(
                         """INSERT INTO settlements(id,order_id,supplier_user_id,gross_cents,platform_fee_cents,supplier_net_cents,
-                           currency,status,hold_until,created_at,updated_at) VALUES(?,?,?,?,?,?,'CNY','holding',?,?,?)""",
-                        (settlement_id, order_id, supplier["id"], order["amount_cents"], platform_fee, supplier_net, hold_until, accepted_at, accepted_at),
+                           referral_commission_cents,currency,status,hold_until,created_at,updated_at)
+                           VALUES(?,?,?,?,?,?,?,'CNY','holding',?,?,?)""",
+                        (settlement_id, order_id, supplier["id"], order["amount_cents"], platform_fee,
+                         supplier_net, referral_commission_cents, hold_until, accepted_at, accepted_at),
                     )
                     audit(connection, session["user_id"], "settlement", settlement_id, "settlement.eligible", {
                         "order_id": order_id, "reason": "buyer_accepted", "gross_cents": order["amount_cents"],
-                        "platform_fee_cents": platform_fee, "supplier_net_cents": supplier_net, "hold_until": hold_until,
+                        "platform_fee_cents": platform_fee, "referral_commission_cents": referral_commission_cents,
+                        "supplier_net_cents": supplier_net, "hold_until": hold_until,
                     })
                 connection.execute("COMMIT")
             except Exception:
@@ -3189,6 +3638,10 @@ class KaiHandler(BaseHTTPRequestHandler):
                 )
                 connection.execute("UPDATE orders SET status='disputed',updated_at=? WHERE id=?", (created, order_id))
                 connection.execute("UPDATE settlements SET status='paused',updated_at=? WHERE order_id=? AND status IN ('holding','payable')", (created, order_id))
+                connection.execute(
+                    "UPDATE supplier_referral_commissions SET status='paused',updated_at=? WHERE order_id=? AND status IN ('holding','available')",
+                    (created, order_id),
+                )
                 audit(connection, session["user_id"], "dispute", dispute_id, "dispute.opened", {
                     "order_id": order_id, "category": category, "reason": reason,
                 })
@@ -3233,6 +3686,10 @@ class KaiHandler(BaseHTTPRequestHandler):
                 )
                 connection.execute("UPDATE orders SET status='refund_pending',updated_at=? WHERE id=?", (created, order_id))
                 connection.execute("UPDATE settlements SET status='paused',updated_at=? WHERE order_id=? AND status IN ('holding','payable')", (created, order_id))
+                connection.execute(
+                    "UPDATE supplier_referral_commissions SET status='paused',updated_at=? WHERE order_id=? AND status IN ('holding','available')",
+                    (created, order_id),
+                )
                 audit(connection, session["user_id"], "refund", refund_id, "refund.requested", {
                     "order_id": order_id, "amount_cents": order["amount_cents"], "reason": reason,
                 }, idem)
@@ -3631,6 +4088,10 @@ class KaiHandler(BaseHTTPRequestHandler):
                 if decision == "reject":
                     connection.execute("UPDATE orders SET status=?,updated_at=? WHERE id=?", (dispute["original_order_status"], updated, order["id"]))
                     connection.execute("UPDATE settlements SET status='holding',updated_at=? WHERE order_id=? AND status='paused'", (updated, order["id"]))
+                    connection.execute(
+                        "UPDATE supplier_referral_commissions SET status='holding',updated_at=? WHERE order_id=? AND status='paused'",
+                        (updated, order["id"]),
+                    )
                     dispute_status = "resolved_rejected"
                 else:
                     payment = connection.execute("SELECT * FROM payments WHERE order_id=? AND status='success'", (order["id"],)).fetchone()
@@ -3683,6 +4144,10 @@ class KaiHandler(BaseHTTPRequestHandler):
                     connection.execute("UPDATE refunds SET status='rejected',reviewer_user_id=?,updated_at=? WHERE id=?", (session["user_id"], updated, refund_id))
                     connection.execute("UPDATE orders SET status=?,updated_at=? WHERE id=?", (refund["original_order_status"], updated, refund["order_id"]))
                     connection.execute("UPDATE settlements SET status='holding',updated_at=? WHERE order_id=? AND status='paused'", (updated, refund["order_id"]))
+                    connection.execute(
+                        "UPDATE supplier_referral_commissions SET status='holding',updated_at=? WHERE order_id=? AND status='paused'",
+                        (updated, refund["order_id"]),
+                    )
                     status = "rejected"
                 elif ALLOW_DEMO:
                     apply_refund_success(connection, refund, uid("mock_refund"), session["user_id"])
@@ -3713,6 +4178,41 @@ class KaiHandler(BaseHTTPRequestHandler):
             connection.execute("UPDATE settlements SET status='paid',payout_ref=?,paid_at=?,updated_at=? WHERE id=?", (payout_ref, updated, updated, settlement_id))
             audit(connection, session["user_id"], "settlement", settlement_id, "settlement.paid", {"payout_ref": payout_ref, "supplier_net_cents": settlement["supplier_net_cents"]})
         self.json_response(200, {"ok": True, "settlement_id": settlement_id, "status": "paid"})
+
+    def admin_mark_supplier_commission_paid(self, commission_id: str) -> None:
+        session = self.session(csrf=True)
+        require_role(session, "admin")
+        data = self.read_json()
+        payout_ref = clean_text(data.get("payout_ref"), "持牌机构返佣流水", 6, 160)
+        paid_at = now_iso()
+        with db_connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                commission = connection.execute(
+                    "SELECT * FROM supplier_referral_commissions WHERE id=?", (commission_id,)
+                ).fetchone()
+                if not commission or commission["status"] != "available":
+                    raise ApiError(409, "返佣尚未达到可支付状态", "commission_not_available")
+                settlement = connection.execute(
+                    "SELECT * FROM settlements WHERE order_id=?", (commission["order_id"],)
+                ).fetchone()
+                if not settlement or settlement["status"] not in ("payable", "paid"):
+                    raise ApiError(409, "关联供应商结算单尚不可支付", "settlement_not_payable")
+                connection.execute(
+                    """UPDATE supplier_referral_commissions SET status='paid',payout_ref=?,paid_at=?,updated_at=?
+                       WHERE id=?""",
+                    (payout_ref, paid_at, paid_at, commission_id),
+                )
+                audit(connection, session["user_id"], "supplier_referral_commission", commission_id,
+                      "supplier_referral.commission_paid", {
+                          "order_id": commission["order_id"], "partner_user_id": commission["partner_user_id"],
+                          "amount_cents": commission["amount_cents"], "payout_ref": payout_ref,
+                      })
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        self.json_response(200, {"ok": True, "commission_id": commission_id, "status": "paid"})
 
     def admin_issue_invoice(self, invoice_id: str) -> None:
         session = self.session(csrf=True)
